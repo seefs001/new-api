@@ -19,6 +19,7 @@ func GetSubscription(c *gin.Context) {
 		expiredTime = token.ExpiredTime
 		remainQuota = token.RemainQuota
 		usedQuota = token.UsedQuota
+
 	} else {
 		userId := c.GetInt("id")
 		remainQuota, err = model.GetUserQuota(userId)
