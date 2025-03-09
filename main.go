@@ -19,6 +19,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/grafana/pyroscope-go"
 	"github.com/joho/godotenv"
 
 	_ "net/http/pprof"
@@ -45,6 +46,13 @@ func main() {
 	}
 	if common.DebugEnabled {
 		common.SysLog("running in debug mode")
+	}
+	if os.Getenv("ENABLE_PYROSCOPE") == "true" {
+		common.SysLog("pyroscope enabled")
+		pyroscope.Start(pyroscope.Config{
+			ApplicationName: "new-api",
+			ServerAddress:   os.Getenv("PYROSCOPE_SERVER_ADDRESS"),
+		})
 	}
 	// Initialize SQL Database
 	err = model.InitDB()
