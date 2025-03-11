@@ -44,7 +44,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     # ports:
-    #   - "3306:3306"  # If you want to access MySQL from outside Docker, uncomment
+      - "3006:3306"  # If you want to access MySQL from outside Docker, uncomment
 
 volumes:
   mysql_data:
