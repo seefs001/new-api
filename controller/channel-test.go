@@ -125,7 +125,7 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 	if resp != nil {
 		httpResp = resp.(*http.Response)
 		if httpResp.StatusCode != http.StatusOK {
-			err := service.RelayErrorHandler(httpResp)
+			err := service.RelayErrorHandler(httpResp, true)
 			return fmt.Errorf("status code %d: %s", httpResp.StatusCode, err.Error.Message), err
 		}
 	}
@@ -186,6 +186,8 @@ func buildTestRequest(model string) *dto.GeneralOpenAIRequest {
 	// 并非Embedding 模型
 	if strings.HasPrefix(model, "o1") || strings.HasPrefix(model, "o3") {
 		testRequest.MaxCompletionTokens = 10
+	} else if strings.Contains(model, "thinking") {
+		testRequest.MaxTokens = 50
 	} else {
 		testRequest.MaxTokens = 10
 	}
