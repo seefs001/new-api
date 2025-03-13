@@ -9,7 +9,7 @@ const File = () => {
       <div className="p-4 border-b">
         <h3 className="text-xl font-semibold">{t('管理渠道')}</h3>
       </div>
-      <div className="flex-grow p-4">
+      <div className="grow p-4">
         <ChannelsTable />
       </div>
     </div>

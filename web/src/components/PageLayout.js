@@ -74,14 +74,14 @@ const PageLayout = () => {
       {/* Header */}
       <header className={cn(
         "p-0 z-50 w-full bg-background border-b",
-        styleState.isMobile ? "sticky top-0" : "fixed top-0 w-full shadow-sm"
+        styleState.isMobile ? "sticky top-0" : "fixed top-0 w-full shadow-xs"
       )}>
         <HeaderBar />
       </header>
 
       {/* Main Content Area */}
       <div className={cn(
-        "flex flex-grow overflow-hidden",
+        "flex grow overflow-hidden",
         styleState.isMobile ? "" : "mt-14" // 56px header height
       )}>
         {/* Sidebar */}
@@ -95,12 +95,12 @@ const PageLayout = () => {
 
         {/* Content */}
         <div className={cn(
-          "flex flex-col flex-grow transition-all duration-300",
+          "flex flex-col grow transition-all duration-300",
           styleState.isMobile ? "" : styleState.showSider ? 
           (styleState.siderCollapsed ? "ml-16" : "ml-64") : "ml-0"
         )}>
           <main className={cn(
-            "flex-grow",
+            "grow",
             styleState.isMobile ? "overflow-visible" : "overflow-auto",
             styleState.shouldInnerPadding ? "p-6" : "p-0",
             "relative"
@@ -109,7 +109,7 @@ const PageLayout = () => {
           </main>
 
           {/* Footer */}
-          <footer className="flex-shrink-0 w-full">
+          <footer className="shrink-0 w-full">
             <FooterBar />
           </footer>
         </div>

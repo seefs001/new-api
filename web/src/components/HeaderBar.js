@@ -199,7 +199,7 @@ const HeaderBar = () => {
   };
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
+    <header className="fixed top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-backdrop-filter:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-6 md:gap-10">
           <Link to="/" className="flex items-center space-x-2" onClick={() => handleNavButtonClick('home')}>
@@ -231,7 +231,7 @@ const HeaderBar = () => {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-background border border-primary/50 relative overflow-hidden shadow-sm hover:shadow transition-shadow duration-200">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-background border border-primary/50 relative overflow-hidden shadow-xs hover:shadow-sm transition-shadow duration-200">
                   {logo ? (
                     <img src={logo} alt="logo" className="h-6 w-auto" />
                   ) : (
@@ -239,7 +239,7 @@ const HeaderBar = () => {
                   )}
                   {(isSelfUseMode || isDemoSiteMode) && (
                     <span className={cn(
-                      "absolute -top-2 -right-2 text-xs px-1 py-0.5 rounded whitespace-nowrap shadow-sm", 
+                      "absolute -top-2 -right-2 text-xs px-1 py-0.5 rounded whitespace-nowrap shadow-xs", 
                       isSelfUseMode ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" : 
                       "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     )}>

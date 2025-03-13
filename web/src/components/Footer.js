@@ -84,7 +84,7 @@ const FooterBar = () => {
       <div className="container flex flex-col items-center justify-between gap-4 md:h-16 md:flex-row">
         {footer ? (
           <div
-            className='custom-footer w-full max-w-screen-lg mx-auto text-center'
+            className='custom-footer w-full max-w-(--breakpoint-lg) mx-auto text-center'
             dangerouslySetInnerHTML={{ __html: footer }}
           ></div>
         ) : (

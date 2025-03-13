@@ -381,7 +381,7 @@ const SiderBar = () => {
           {item.icon}
           {!isCollapsed && (
             <>
-              <span className="ml-2 flex-grow">{item.text}</span>
+              <span className="ml-2 grow">{item.text}</span>
               <ChevronDownIcon className={cn(
                 "h-4 w-4 transition-transform",
                 isOpen ? "transform rotate-180" : ""
@@ -456,7 +456,7 @@ const SiderBar = () => {
       {renderUserBlock()}
       
       {/* Navigation */}
-      <ScrollArea className="flex-grow">
+      <ScrollArea className="grow">
         <div className="py-2">
           {/* Home Link */}
           <Link

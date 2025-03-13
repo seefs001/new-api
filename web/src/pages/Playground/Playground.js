@@ -316,7 +316,7 @@ const Playground = () => {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder={t("请输入消息...")}
-          className="flex-grow min-h-[40px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+          className="grow min-h-[40px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
