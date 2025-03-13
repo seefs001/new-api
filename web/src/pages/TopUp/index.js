@@ -1,26 +1,19 @@
-import React, { useEffect, useState } from 'react';
 import { API, isMobile, showError, showInfo, showSuccess } from '../../helpers';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../../components/ui/form";
+import React, { useEffect, useState } from 'react';
 import {
   renderNumber,
   renderQuota,
   renderQuotaWithAmount,
 } from '../../helpers/render';
-import {
-  Col,
-  Layout,
-  Row,
-  Typography,
-  Card,
-  Button,
-  Form,
-  Divider,
-  Space,
-  Modal,
-  Toast,
-} from '@douyinfe/semi-ui';
-import Title from '@douyinfe/semi-ui/lib/es/typography/title';
-import Text from '@douyinfe/semi-ui/lib/es/typography/text';
+
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { Link } from 'react-router-dom';
+import { Separator } from "../../components/ui/separator";
+import { toast } from "../../components/ui/use-toast";
 import { useTranslation } from 'react-i18next';
 
 const TopUp = () => {
@@ -51,10 +44,9 @@ const TopUp = () => {
       const { success, message, data } = res.data;
       if (success) {
         showSuccess(t('兑换成功！'));
-        Modal.success({
+        toast({
           title: t('兑换成功！'),
-          content: t('成功兑换额度：') + renderQuota(data),
-          centered: true,
+          description: t('成功兑换额度：') + renderQuota(data),
         });
         setUserQuota((quota) => {
           return quota + data;
@@ -195,7 +187,11 @@ const TopUp = () => {
           setAmount(parseFloat(data));
         } else {
           setAmount(0);
-          Toast.error({ content: '错误：' + data, id: 'getAmount' });
+          toast({
+            title: '错误',
+            description: data,
+            variant: 'destructive',
+          });
           // setTopUpCount(parseInt(res.data.count));
           // setAmount(parseInt(data));
         }
@@ -213,78 +209,89 @@ const TopUp = () => {
   };
 
   return (
-    <div>
-      <Layout>
-        <Layout.Header>
-          <h3>{t('我的钱包')}</h3>
-        </Layout.Header>
-        <Layout.Content>
-          <Modal
-            title={t('确定要充值吗')}
-            visible={open}
-            onOk={onlineTopUp}
-            onCancel={handleCancel}
-            maskClosable={false}
-            size={'small'}
-            centered={true}
-          >
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="border-b pb-4">
+        <h3 className="text-2xl font-semibold">{t('我的钱包')}</h3>
+      </div>
+      
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('确定要充值吗')}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
             <p>{t('充值数量')}：{topUpCount}</p>
             <p>{t('实付金额')}：{renderAmount()}</p>
             <p>{t('是否确认充值？')}</p>
-          </Modal>
-          <div
-            style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}
-          >
-            <Card style={{ width: '500px', padding: '20px' }}>
-              <Title level={3} style={{ textAlign: 'center' }}>
-                {t('余额')} {renderQuota(userQuota)}
-              </Title>
-              <div style={{ marginTop: 20 }}>
-                <Divider>{t('兑换余额')}</Divider>
-                <Form>
-                  <Form.Input
-                    field={'redemptionCode'}
-                    label={t('兑换码')}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancel}>
+              {t('取消')}
+            </Button>
+            <Button onClick={onlineTopUp}>
+              {t('确认')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <div className="flex justify-center">
+        <Card className="w-full max-w-lg">
+          <CardHeader>
+            <CardTitle className="text-center">
+              {t('余额')} {renderQuota(userQuota)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <Separator className="my-4">
+                <span className="px-2">{t('兑换余额')}</span>
+              </Separator>
+              <div className="space-y-4">
+                <div>
+                  <FormLabel>{t('兑换码')}</FormLabel>
+                  <Input
                     placeholder={t('兑换码')}
-                    name='redemptionCode'
                     value={redemptionCode}
-                    onChange={(value) => {
-                      setRedemptionCode(value);
-                    }}
+                    onChange={(e) => setRedemptionCode(e.target.value)}
+                    className="mt-1"
                   />
-                  <Space>
-                    {topUpLink ? (
-                      <Button
-                        type={'primary'}
-                        theme={'solid'}
-                        onClick={openTopUpLink}
-                      >
-                        {t('获取兑换码')}
-                      </Button>
-                    ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {topUpLink && (
                     <Button
-                      type={'warning'}
-                      theme={'solid'}
-                      onClick={topUp}
-                      disabled={isSubmitting}
+                      variant="default"
+                      onClick={openTopUpLink}
                     >
-                      {isSubmitting ? t('兑换中...') : t('兑换')}
+                      {t('获取兑换码')}
                     </Button>
-                  </Space>
-                </Form>
+                  )}
+                  <Button
+                    variant="destructive"
+                    onClick={topUp}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? t('兑换中...') : t('兑换')}
+                  </Button>
+                </div>
               </div>
-              <div style={{ marginTop: 20 }}>
-                <Divider>{t('在线充值')}</Divider>
-                <Form>
-                  <Form.Input
+            </div>
+            
+            <div>
+              <Separator className="my-4">
+                <span className="px-2">{t('在线充值')}</span>
+              </Separator>
+              <div className="space-y-4">
+                <div>
+                  <FormLabel>{t('实付金额')}：{renderAmount()}</FormLabel>
+                  <Input
                     disabled={!enableOnlineTopUp}
-                    field={'redemptionCount'}
-                    label={t('实付金额：') + ' ' + renderAmount()}
                     placeholder={t('充值数量，最低 ') + renderQuotaWithAmount(minTopUp)}
-                    name='redemptionCount'
-                    type={'number'}
+                    type="number"
                     value={topUpCount}
-                    onChange={async (value) => {
+                    className="mt-1"
+                    onChange={async (e) => {
+                      let value = parseInt(e.target.value);
                       if (value < 1) {
                         value = 1;
                       }
@@ -292,44 +299,26 @@ const TopUp = () => {
                       await getAmount(value);
                     }}
                   />
-                  <Space>
-                    <Button
-                      type={'primary'}
-                      theme={'solid'}
-                      onClick={async () => {
-                        preTopUp('zfb');
-                      }}
-                    >
-                      {t('支付宝')}
-                    </Button>
-                    <Button
-                      style={{
-                        backgroundColor: 'rgba(var(--semi-green-5), 1)',
-                      }}
-                      type={'primary'}
-                      theme={'solid'}
-                      onClick={async () => {
-                        preTopUp('wx');
-                      }}
-                    >
-                      {t('微信')}
-                    </Button>
-                  </Space>
-                </Form>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="default"
+                    onClick={() => preTopUp('zfb')}
+                  >
+                    {t('支付宝')}
+                  </Button>
+                  <Button
+                    onClick={() => preTopUp('wx')}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {t('微信')}
+                  </Button>
+                </div>
               </div>
-              {/*<div style={{ display: 'flex', justifyContent: 'right' }}>*/}
-              {/*    <Text>*/}
-              {/*        <Link onClick={*/}
-              {/*            async () => {*/}
-              {/*                window.location.href = '/topup/history'*/}
-              {/*            }*/}
-              {/*        }>充值记录</Link>*/}
-              {/*    </Text>*/}
-              {/*</div>*/}
-            </Card>
-          </div>
-        </Layout.Content>
-      </Layout>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

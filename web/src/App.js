@@ -6,7 +6,6 @@ import Chat from './pages/Chat';
 import Chat2Link from './pages/Chat2Link';
 import EditChannel from './pages/Channel/EditChannel';
 import EditUser from './pages/User/EditUser';
-import { Layout } from '@douyinfe/semi-ui';
 import Loading from './components/Loading';
 import Log from './pages/Log';
 import LoginForm from './components/LoginForm';

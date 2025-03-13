@@ -1,10 +1,10 @@
-import React from 'react';
 import LogsTable from '../../components/LogsTable';
+import React from 'react';
 
-const Token = () => (
-  <>
+const Log = () => (
+  <div className="container mx-auto py-6">
     <LogsTable />
-  </>
+  </div>
 );
 
-export default Token;
+export default Log;

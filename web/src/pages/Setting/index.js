@@ -1,21 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, TabPane, Tabs } from '@douyinfe/semi-ui';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { useLocation, useNavigate } from 'react-router-dom';
 
-import SystemSetting from '../../components/SystemSetting';
-import { isRoot } from '../../helpers';
+import ModelSetting from '../../components/ModelSetting.js';
+import OperationSetting from '../../components/OperationSetting';
 import OtherSetting from '../../components/OtherSetting';
 import PersonalSetting from '../../components/PersonalSetting';
-import OperationSetting from '../../components/OperationSetting';
 import RateLimitSetting from '../../components/RateLimitSetting.js';
-import ModelSetting from '../../components/ModelSetting.js';
+import SystemSetting from '../../components/SystemSetting';
+import { isRoot } from '../../helpers';
+import { useTranslation } from 'react-i18next';
 
 const Setting = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const [tabActiveKey, setTabActiveKey] = useState('1');
+  const [tabActiveKey, setTabActiveKey] = useState('operation');
   let panes = [];
 
   if (isRoot()) {
@@ -45,10 +45,12 @@ const Setting = () => {
       itemKey: 'other',
     });
   }
+
   const onChangeTab = (key) => {
     setTabActiveKey(key);
     navigate(`?tab=${key}`);
   };
+
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const tab = searchParams.get('tab');
@@ -58,23 +60,24 @@ const Setting = () => {
       onChangeTab('operation');
     }
   }, [location.search]);
+
   return (
-    <div>
-      <Layout>
-        <Layout.Content>
-          <Tabs
-            type='line'
-            activeKey={tabActiveKey}
-            onChange={(key) => onChangeTab(key)}
-          >
-            {panes.map((pane) => (
-              <TabPane itemKey={pane.itemKey} tab={pane.tab} key={pane.itemKey}>
-                {tabActiveKey === pane.itemKey && pane.content}
-              </TabPane>
-            ))}
-          </Tabs>
-        </Layout.Content>
-      </Layout>
+    <div className="container mx-auto py-6">
+      <Tabs value={tabActiveKey} onValueChange={onChangeTab} className="w-full">
+        <TabsList className="mb-4">
+          {panes.map((pane) => (
+            <TabsTrigger key={pane.itemKey} value={pane.itemKey}>
+              {pane.tab}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        
+        {panes.map((pane) => (
+          <TabsContent key={pane.itemKey} value={pane.itemKey}>
+            {pane.content}
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 };

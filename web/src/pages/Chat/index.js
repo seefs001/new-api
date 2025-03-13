@@ -1,7 +1,8 @@
-import React, {useEffect} from 'react';
-import { useTokenKeys } from '../../components/fetchTokenKeys';
-import {Banner, Layout} from '@douyinfe/semi-ui';
+import { Alert, AlertDescription } from "../../components/ui/alert";
+
+import React from 'react';
 import { useParams } from 'react-router-dom';
+import { useTokenKeys } from '../../components/fetchTokenKeys';
 
 const ChatPage = () => {
   const { id } = useParams();
@@ -32,20 +33,15 @@ const ChatPage = () => {
   return !isLoading && iframeSrc ? (
     <iframe
       src={iframeSrc}
-      style={{ width: '100%', height: '100%', border: 'none' }}
+      className="w-full h-full border-none"
       title="Token Frame"
       allow="camera;microphone"
     />
   ) : (
-    <div>
-      <Layout>
-        <Layout.Header>
-          <Banner
-              description={"正在跳转......"}
-              type={"warning"}
-          />
-        </Layout.Header>
-      </Layout>
+    <div className="container mx-auto p-4">
+      <Alert variant="warning">
+        <AlertDescription>正在跳转......</AlertDescription>
+      </Alert>
     </div>
   );
 };

@@ -1,15 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Button,
-  Divider,
-  Form,
-  Grid,
-  Header,
-  Message,
-  Modal,
-} from 'semantic-ui-react';
 import { API, removeTrailingSlash, showError, showSuccess, verifyJSON } from '../helpers';
+import { Alert, AlertDescription } from './ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from './ui/dialog';
+import React, { useEffect, useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
+// Shadcn UI components
+import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Separator } from './ui/separator';
 import { useTheme } from '../context/Theme';
 
 const SystemSetting = () => {

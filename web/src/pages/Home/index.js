@@ -1,9 +1,10 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { Card, Col, Row } from '@douyinfe/semi-ui';
 import { API, showError, showNotice, timestamp2string } from '../../helpers';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import React, { useContext, useEffect, useState } from 'react';
+
 import { StatusContext } from '../../context/Status';
-import { marked } from 'marked';
 import { StyleContext } from '../../context/Style/index.js';
+import { marked } from 'marked';
 import { useTranslation } from 'react-i18next';
 
 const Home = () => {
@@ -73,129 +74,123 @@ const Home = () => {
   return (
     <>
       {homePageContentLoaded && homePageContent === '' ? (
-        <>
-          <Card
-            bordered={false}
-            headerLine={false}
-            title={t('系统状况')}
-            bodyStyle={{ padding: '10px 20px' }}
-          >
-            <Row gutter={16}>
-              <Col span={12}>
-                <Card
-                  title={t('系统信息')}
-                  headerExtraContent={
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        color: 'var(--semi-color-text-1)',
-                      }}
-                    >
-                      {t('系统信息总览')}
-                    </span>
-                  }
-                >
-                  <p>{t('名称')}：{statusState?.status?.system_name}</p>
-                  <p>
-                    {t('版本')}：
-                    {statusState?.status?.version
-                      ? statusState?.status?.version
-                      : 'unknown'}
-                  </p>
-                  <p>
-                    {t('源码')}：
-                    <a
-                      href='https://github.com/Calcium-Ion/new-api'
-                      target='_blank'
-                      rel='noreferrer'
-                    >
-                      https://github.com/Calcium-Ion/new-api
-                    </a>
-                  </p>
-                  <p>
-                    {t('协议')}：
-                    <a
-                      href='https://www.apache.org/licenses/LICENSE-2.0'
-                      target='_blank'
-                      rel='noreferrer'
-                    >
-                      Apache-2.0 License
-                    </a>
-                  </p>
-                  <p>{t('启动时间')}：{getStartTimeString()}</p>
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>{t('系统状况')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-lg">{t('系统信息')}</CardTitle>
+                      <span className="text-xs text-muted-foreground">
+                        {t('系统信息总览')}
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p>{t('名称')}：{statusState?.status?.system_name}</p>
+                    <p>
+                      {t('版本')}：
+                      {statusState?.status?.version
+                        ? statusState?.status?.version
+                        : 'unknown'}
+                    </p>
+                    <p>
+                      {t('源码')}：
+                      <a
+                        href='https://github.com/Calcium-Ion/new-api'
+                        target='_blank'
+                        rel='noreferrer'
+                        className="text-primary hover:underline"
+                      >
+                        https://github.com/Calcium-Ion/new-api
+                      </a>
+                    </p>
+                    <p>
+                      {t('协议')}：
+                      <a
+                        href='https://www.apache.org/licenses/LICENSE-2.0'
+                        target='_blank'
+                        rel='noreferrer'
+                        className="text-primary hover:underline"
+                      >
+                        Apache-2.0 License
+                      </a>
+                    </p>
+                    <p>{t('启动时间')}：{getStartTimeString()}</p>
+                  </CardContent>
                 </Card>
-              </Col>
-              <Col span={12}>
-                <Card
-                  title={t('系统配置')}
-                  headerExtraContent={
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        color: 'var(--semi-color-text-1)',
-                      }}
-                    >
-                      {t('系统配置总览')}
-                    </span>
-                  }
-                >
-                  <p>
-                    {t('邮箱验证')}：
-                    {statusState?.status?.email_verification === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                  <p>
-                    {t('GitHub 身份验证')}：
-                    {statusState?.status?.github_oauth === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                  <p>
-                    {t('OIDC 身份验证')}：
-                    {statusState?.status?.oidc === true
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-lg">{t('系统配置')}</CardTitle>
+                      <span className="text-xs text-muted-foreground">
+                        {t('系统配置总览')}
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p>
+                      {t('邮箱验证')}：
+                      {statusState?.status?.email_verification === true
                         ? t('已启用')
                         : t('未启用')}
-                  </p>
-                  <p>
-                    {t('微信身份验证')}：
-                    {statusState?.status?.wechat_login === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                  <p>
-                    {t('Turnstile 用户校验')}：
-                    {statusState?.status?.turnstile_check === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                  <p>
-                    {t('Telegram 身份验证')}：
-                    {statusState?.status?.telegram_oauth === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
-                  <p>
-                    {t('Linux DO 身份验证')}：
-                    {statusState?.status?.linuxdo_oauth === true
-                      ? t('已启用')
-                      : t('未启用')}
-                  </p>
+                    </p>
+                    <p>
+                      {t('GitHub 身份验证')}：
+                      {statusState?.status?.github_oauth === true
+                        ? t('已启用')
+                        : t('未启用')}
+                    </p>
+                    <p>
+                      {t('OIDC 身份验证')}：
+                      {statusState?.status?.oidc === true
+                          ? t('已启用')
+                          : t('未启用')}
+                    </p>
+                    <p>
+                      {t('微信身份验证')}：
+                      {statusState?.status?.wechat_login === true
+                        ? t('已启用')
+                        : t('未启用')}
+                    </p>
+                    <p>
+                      {t('Turnstile 用户校验')}：
+                      {statusState?.status?.turnstile_check === true
+                        ? t('已启用')
+                        : t('未启用')}
+                    </p>
+                    <p>
+                      {t('Telegram 身份验证')}：
+                      {statusState?.status?.telegram_oauth === true
+                        ? t('已启用')
+                        : t('未启用')}
+                    </p>
+                    <p>
+                      {t('Linux DO 身份验证')}：
+                      {statusState?.status?.linuxdo_oauth === true
+                        ? t('已启用')
+                        : t('未启用')}
+                    </p>
+                  </CardContent>
                 </Card>
-              </Col>
-            </Row>
+              </div>
+            </CardContent>
           </Card>
-        </>
+        </div>
       ) : (
         <>
           {homePageContent.startsWith('https://') ? (
             <iframe
               src={homePageContent}
-              style={{ width: '100%', height: '100vh', border: 'none' }}
+              className="w-full h-screen border-none"
             />
           ) : (
             <div
-              style={{ fontSize: 'larger' }}
+              className="text-lg"
               dangerouslySetInnerHTML={{ __html: homePageContent }}
             ></div>
           )}

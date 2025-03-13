@@ -1,13 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Row, Spin } from '@douyinfe/semi-ui';
 import {
-  compareObjects,
   API,
+  compareObjects,
   showError,
   showSuccess,
   showWarning,
-  verifyJSON,
+  verifyJSON
 } from '../../../helpers';
+import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import React, { useEffect, useRef, useState } from 'react';
+
+import { Button } from "../../../components/ui/button";
+import { Label } from "../../../components/ui/label";
+import { Loader2 } from "lucide-react";
+import { Textarea } from "../../../components/ui/textarea";
 import { useTranslation } from 'react-i18next';
 
 export default function GroupRatioSettings(props) {
@@ -15,54 +21,53 @@ export default function GroupRatioSettings(props) {
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
     GroupRatio: '',
-    UserUsableGroups: ''
+    UserUsableGroups: '',
   });
-  const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
+  const [validationErrors, setValidationErrors] = useState({});
 
-  async function onSubmit() {
-    try {
-      await refForm.current.validate().then(() => {
-        const updateArray = compareObjects(inputs, inputsRow);
-        if (!updateArray.length) return showWarning(t('你似乎并没有修改什么'));
-        
-        const requestQueue = updateArray.map((item) => {
-          const value = typeof inputs[item.key] === 'boolean' 
-            ? String(inputs[item.key]) 
-            : inputs[item.key];
-          return API.put('/api/option/', { key: item.key, value });
-        });
-
-        setLoading(true);
-        Promise.all(requestQueue)
-          .then((res) => {
-            if (res.includes(undefined)) {
-              return showError(requestQueue.length > 1 ? t('部分保存失败，请重试') : t('保存失败'));
-            }
-            
-            for (let i = 0; i < res.length; i++) {
-              if (!res[i].data.success) {
-                return showError(res[i].data.message);
-              }
-            }
-            
-            showSuccess(t('保存成功'));
-            props.refresh();
-          })
-          .catch(error => {
-            console.error('Unexpected error:', error);
-            showError(t('保存失败，请重试'));
-          })
-          .finally(() => {
-            setLoading(false);
-          });
-      }).catch(() => {
-        showError(t('请检查输入'));
-      });
-    } catch (error) {
-      showError(t('请检查输入'));
-      console.error(error);
+  function onSubmit() {
+    // First validate all JSON fields
+    const errors = {};
+    if (!verifyJSON(inputs.GroupRatio)) {
+      errors.GroupRatio = t('不是合法的 JSON 字符串');
     }
+    if (!verifyJSON(inputs.UserUsableGroups)) {
+      errors.UserUsableGroups = t('不是合法的 JSON 字符串');
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors({});
+    
+    const updateArray = compareObjects(inputs, inputsRow);
+    if (!updateArray.length) return showWarning(t('你似乎并没有修改什么'));
+    const requestQueue = updateArray.map((item) => {
+      return API.put('/api/option/', {
+        key: item.key,
+        value: inputs[item.key],
+      });
+    });
+    setLoading(true);
+    Promise.all(requestQueue)
+      .then((res) => {
+        if (requestQueue.length === 1) {
+          if (res.includes(undefined)) return;
+        } else if (requestQueue.length > 1) {
+          if (res.includes(undefined)) return showError(t('部分保存失败，请重试'));
+        }
+        showSuccess(t('保存成功'));
+        props.refresh();
+      })
+      .catch(() => {
+        showError(t('保存失败，请重试'));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   useEffect(() => {
@@ -74,58 +79,80 @@ export default function GroupRatioSettings(props) {
     }
     setInputs(currentInputs);
     setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
   }, [props.options]);
-
+  
   return (
-    <Spin spinning={loading}>
-      <Form
-        values={inputs}
-        getFormApi={(formAPI) => (refForm.current = formAPI)}
-        style={{ marginBottom: 15 }}
-      >
-        <Form.Section text={t('分组设置')}>
-          <Row gutter={16}>
-            <Col xs={24} sm={16}>
-              <Form.TextArea
-                label={t('分组倍率')}
-                placeholder={t('为一个 JSON 文本，键为分组名称，值为倍率')}
-                field={'GroupRatio'}
-                autosize={{ minRows: 6, maxRows: 12 }}
-                trigger='blur'
-                stopValidateWithError
-                rules={[
-                  {
-                    validator: (rule, value) => verifyJSON(value),
-                    message: t('不是合法的 JSON 字符串')
-                  }
-                ]}
-                onChange={(value) => setInputs({ ...inputs, GroupRatio: value })}
-              />
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col xs={24} sm={16}>
-              <Form.TextArea
-                label={t('用户可选分组')}
-                placeholder={t('为一个 JSON 文本，键为分组名称，值为分组描述')}
-                field={'UserUsableGroups'}
-                autosize={{ minRows: 6, maxRows: 12 }}
-                trigger='blur'
-                stopValidateWithError
-                rules={[
-                  {
-                    validator: (rule, value) => verifyJSON(value),
-                    message: t('不是合法的 JSON 字符串')
-                  }
-                ]}
-                onChange={(value) => setInputs({ ...inputs, UserUsableGroups: value })}
-              />
-            </Col>
-          </Row>
-        </Form.Section>
-      </Form>
-      <Button onClick={onSubmit}>{t('保存分组倍率设置')}</Button>
-    </Spin>
+    <>
+      {loading ? (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('分组倍率设置')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="GroupRatio">{t('分组倍率')}</Label>
+                  <Textarea
+                    id="GroupRatio"
+                    value={inputs.GroupRatio}
+                    onChange={(e) => 
+                      setInputs({
+                        ...inputs,
+                        GroupRatio: e.target.value,
+                      })
+                    }
+                    placeholder={t('为一个 JSON 文本，键为分组ID，值为倍率')}
+                    rows={6}
+                    className={`font-mono resize-y ${validationErrors.GroupRatio ? "border-destructive" : ""}`}
+                  />
+                  {validationErrors.GroupRatio && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertDescription>{validationErrors.GroupRatio}</AlertDescription>
+                    </Alert>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {t('为一个 JSON 文本，键为分组ID，值为倍率')}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="UserUsableGroups">{t('用户可用分组')}</Label>
+                  <Textarea
+                    id="UserUsableGroups"
+                    value={inputs.UserUsableGroups}
+                    onChange={(e) => 
+                      setInputs({
+                        ...inputs,
+                        UserUsableGroups: e.target.value,
+                      })
+                    }
+                    placeholder={t('为一个 JSON 文本，键为分组ID，值为可用的分组ID数组')}
+                    rows={6}
+                    className={`font-mono resize-y ${validationErrors.UserUsableGroups ? "border-destructive" : ""}`}
+                  />
+                  {validationErrors.UserUsableGroups && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertDescription>{validationErrors.UserUsableGroups}</AlertDescription>
+                    </Alert>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {t('为一个 JSON 文本，键为分组ID，值为可用的分组ID数组')}
+                  </p>
+                </div>
+              </div>
+              
+              <Button onClick={onSubmit} className="mt-4">
+                {t('保存分组倍率设置')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </>
   );
 } 

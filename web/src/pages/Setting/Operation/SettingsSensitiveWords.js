@@ -1,12 +1,18 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Row, Spin, Tag } from '@douyinfe/semi-ui';
 import {
-  compareObjects,
   API,
+  compareObjects,
   showError,
   showSuccess,
   showWarning,
 } from '../../../helpers';
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import React, { useEffect, useRef, useState } from 'react';
+
+import { Button } from "../../../components/ui/button";
+import { Checkbox } from "../../../components/ui/checkbox";
+import { Label } from "../../../components/ui/label";
+import { Loader2 } from "lucide-react";
+import { Textarea } from "../../../components/ui/textarea";
 import { useTranslation } from 'react-i18next';
 
 export default function SettingsSensitiveWords(props) {
@@ -17,7 +23,6 @@ export default function SettingsSensitiveWords(props) {
     CheckSensitiveOnPromptEnabled: false,
     SensitiveWords: '',
   });
-  const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
 
   function onSubmit() {
@@ -63,75 +68,82 @@ export default function SettingsSensitiveWords(props) {
     }
     setInputs(currentInputs);
     setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
   }, [props.options]);
+  
   return (
     <>
-      <Spin spinning={loading}>
-        <Form
-          values={inputs}
-          getFormApi={(formAPI) => (refForm.current = formAPI)}
-          style={{ marginBottom: 15 }}
-        >
-          <Form.Section text={t('屏蔽词过滤设置')}>
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'CheckSensitiveEnabled'}
-                  label={t('启用屏蔽词过滤功能')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) => {
+      {loading ? (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('屏蔽词过滤设置')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="CheckSensitiveEnabled"
+                    checked={inputs.CheckSensitiveEnabled}
+                    onCheckedChange={(checked) => {
+                      setInputs({
+                        ...inputs,
+                        CheckSensitiveEnabled: checked,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="CheckSensitiveEnabled">
+                    {t('启用屏蔽词过滤功能')}
+                  </Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="CheckSensitiveOnPromptEnabled"
+                    checked={inputs.CheckSensitiveOnPromptEnabled}
+                    onCheckedChange={(checked) => {
+                      setInputs({
+                        ...inputs,
+                        CheckSensitiveOnPromptEnabled: checked,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="CheckSensitiveOnPromptEnabled">
+                    {t('启用 Prompt 检查')}
+                  </Label>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="SensitiveWords">{t('屏蔽词列表')}</Label>
+                <Textarea
+                  id="SensitiveWords"
+                  value={inputs.SensitiveWords}
+                  onChange={(e) =>
                     setInputs({
                       ...inputs,
-                      CheckSensitiveEnabled: value,
-                    });
-                  }}
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'CheckSensitiveOnPromptEnabled'}
-                  label={t('启用 Prompt 检查')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      CheckSensitiveOnPromptEnabled: value,
+                      SensitiveWords: e.target.value,
                     })
                   }
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.TextArea
-                  label={t('屏蔽词列表')}
-                  extraText={t('一行一个屏蔽词，不需要符号分割')}
                   placeholder={t('一行一个屏蔽词，不需要符号分割')}
-                  field={'SensitiveWords'}
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      SensitiveWords: value,
-                    })
-                  }
-                  style={{ fontFamily: 'JetBrains Mono, Consolas' }}
-                  autosize={{ minRows: 6, maxRows: 12 }}
+                  rows={6}
+                  className="font-mono resize-y"
                 />
-              </Col>
-            </Row>
-            <Row>
-              <Button size='default' onClick={onSubmit}>
+                <p className="text-sm text-muted-foreground">
+                  {t('一行一个屏蔽词，不需要符号分割')}
+                </p>
+              </div>
+              
+              <Button onClick={onSubmit}>
                 {t('保存屏蔽词过滤设置')}
               </Button>
-            </Row>
-          </Form.Section>
-        </Form>
-      </Spin>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

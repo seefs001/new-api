@@ -1,23 +1,54 @@
-import React, { useEffect, useState } from 'react';
-import { Label } from 'semantic-ui-react';
 import { API, copy, isAdmin, showError, showSuccess, timestamp2string } from '../helpers';
-
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from './ui/dialog';
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel
+} from './ui/form';
+import React, { useEffect, useState } from 'react';
 import {
     Table,
-    Tag,
-    Form,
-    Button,
-    Layout,
-    Modal,
-    Typography, Progress, Card
-} from '@douyinfe/semi-ui';
+    TableBody,
+    TableCaption,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from './ui/table';
+
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 import { ITEMS_PER_PAGE } from '../constants';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { useForm } from 'react-hook-form';
 
-const colors = ['amber', 'blue', 'cyan', 'green', 'grey', 'indigo',
-    'light-blue', 'lime', 'orange', 'pink',
-    'purple', 'red', 'teal', 'violet', 'yellow'
-]
-
+const colors = {
+    'amber': 'bg-amber-500 hover:bg-amber-600',
+    'blue': 'bg-blue-500 hover:bg-blue-600',
+    'cyan': 'bg-cyan-500 hover:bg-cyan-600',
+    'green': 'bg-green-500 hover:bg-green-600',
+    'grey': 'bg-gray-500 hover:bg-gray-600',
+    'indigo': 'bg-indigo-500 hover:bg-indigo-600',
+    'light-blue': 'bg-sky-500 hover:bg-sky-600',
+    'lime': 'bg-lime-500 hover:bg-lime-600',
+    'orange': 'bg-orange-500 hover:bg-orange-600',
+    'pink': 'bg-pink-500 hover:bg-pink-600',
+    'purple': 'bg-purple-500 hover:bg-purple-600',
+    'red': 'bg-red-500 hover:bg-red-600',
+    'teal': 'bg-teal-500 hover:bg-teal-600',
+    'violet': 'bg-violet-500 hover:bg-violet-600',
+    'yellow': 'bg-yellow-500 hover:bg-yellow-600'
+};
 
 const renderTimestamp = (timestampInSeconds) => {
     const date = new Date(timestampInSeconds * 1000); // 从秒转换为毫秒
@@ -47,13 +78,13 @@ function renderDuration(submit_time, finishTime) {
     const durationSec = (durationMs / 1000).toFixed(1);
 
     // 设置颜色：大于60秒则为红色，小于等于60秒则为绿色
-    const color = durationSec > 60 ? 'red' : 'green';
+    const variant = durationSec > 60 ? 'destructive' : 'success';
 
     // 返回带有样式的颜色标签
     return (
-        <Tag color={color} size="large">
+        <Badge variant={variant}>
             {durationSec} 秒
-        </Tag>
+        </Badge>
     );
 }
 
@@ -61,155 +92,8 @@ const LogsTable = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalContent, setModalContent] = useState('');
     const isAdminUser = isAdmin();
-    const columns = [
-        {
-            title: "提交时间",
-            dataIndex: 'submit_time',
-            render: (text, record, index) => {
-                return (
-                    <div>
-                        {text ? renderTimestamp(text) : "-"}
-                    </div>
-                );
-            },
-        },
-        {
-            title: "结束时间",
-            dataIndex: 'finish_time',
-            render: (text, record, index) => {
-                return (
-                    <div>
-                        {text ? renderTimestamp(text) : "-"}
-                    </div>
-                );
-            },
-        },
-        {
-            title: '进度',
-            dataIndex: 'progress',
-            width: 50,
-            render: (text, record, index) => {
-                return (
-                    <div>
-                        {
-                            // 转换例如100%为数字100，如果text未定义，返回0
-                            isNaN(text.replace('%', '')) ? text : <Progress width={42} type="circle" showInfo={true} percent={Number(text.replace('%', '') || 0)} aria-label="drawing progress" />
-                        }
-                    </div>
-                );
-            },
-        },
-        {
-            title: '花费时间',
-            dataIndex: 'finish_time', // 以finish_time作为dataIndex
-            key: 'finish_time',
-            render: (finish, record) => {
-                // 假设record.start_time是存在的，并且finish是完成时间的时间戳
-                return <>
-                    {
-                        finish ? renderDuration(record.submit_time, finish) : "-"
-                    }
-                </>
-            },
-        },
-        {
-            title: "渠道",
-            dataIndex: 'channel_id',
-            className: isAdminUser ? 'tableShow' : 'tableHiddle',
-            render: (text, record, index) => {
-                return (
-                    <div>
-                        <Tag
-                            color={colors[parseInt(text) % colors.length]}
-                            size='large'
-                            onClick={() => {
-                                copyText(text); // 假设copyText是用于文本复制的函数
-                            }}
-                        >
-                            {' '}
-                            {text}{' '}
-                        </Tag>
-                    </div>
-                );
-            },
-        },
-        {
-            title: "平台",
-            dataIndex: 'platform',
-            render: (text, record, index) => {
-                return (
-                    <div>
-                        {renderPlatform(text)}
-                    </div>
-                );
-            },
-        },
-        {
-            title: '类型',
-            dataIndex: 'action',
-            render: (text, record, index) => {
-                return (
-                    <div>
-                        {renderType(text)}
-                    </div>
-                );
-            },
-        },
-        {
-            title: '任务ID（点击查看详情）',
-            dataIndex: 'task_id',
-            render: (text, record, index) => {
-                return (<Typography.Text
-                    ellipsis={{ showTooltip: true }}
-                    //style={{width: 100}}
-                    onClick={() => {
-                        setModalContent(JSON.stringify(record, null, 2));
-                        setIsModalOpen(true);
-                    }}
-                >
-                    <div>
-                        {text}
-                    </div>
-                </Typography.Text>);
-            },
-        },
-        {
-            title: '任务状态',
-            dataIndex: 'status',
-            render: (text, record, index) => {
-                return (
-                    <div>
-                        {renderStatus(text)}
-                    </div>
-                );
-            },
-        },
-
-        {
-            title: '失败原因',
-            dataIndex: 'fail_reason',
-            render: (text, record, index) => {
-                // 如果text未定义，返回替代文本，例如空字符串''或其他
-                if (!text) {
-                    return '无';
-                }
-
-                return (
-                    <Typography.Text
-                        ellipsis={{ showTooltip: true }}
-                        style={{ width: 100 }}
-                        onClick={() => {
-                            setModalContent(text);
-                            setIsModalOpen(true);
-                        }}
-                    >
-                        {text}
-                    </Typography.Text>
-                );
-            }
-        }
-    ];
-
+    const form = useForm();
+    
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activePage, setActivePage] = useState(1);
@@ -227,20 +111,18 @@ const LogsTable = () => {
     });
     const { channel_id, task_id, start_timestamp, end_timestamp } = inputs;
 
-    const handleInputChange = (value, name) => {
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
         setInputs((inputs) => ({ ...inputs, [name]: value }));
     };
-
 
     const setLogsFormat = (logs) => {
         for (let i = 0; i < logs.length; i++) {
             logs[i].timestamp2string = timestamp2string(logs[i].created_at);
             logs[i].key = '' + logs[i].id;
         }
-        // data.key = '' + data.id
         setLogs(logs);
         setLogCount(logs.length + ITEMS_PER_PAGE);
-        // console.log(logCount);
     }
 
     const loadLogs = async (startIdx) => {
@@ -292,7 +174,7 @@ const LogsTable = () => {
             showSuccess('已复制：' + text);
         } else {
             // setSearchKeyword(text);
-            Modal.error({ title: "无法复制到剪贴板，请手动复制", content: text });
+            Dialog.error({ title: "无法复制到剪贴板，请手动复制", content: text });
         }
     }
 
@@ -345,55 +227,203 @@ const LogsTable = () => {
     }
 
     return (
-        <>
+        <div className="space-y-4">
+            <Card>
+                <CardHeader>
+                    <CardTitle>任务日志</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <form className="flex flex-col gap-4 md:flex-row md:items-end">
+                        <div className="flex-1 space-y-2">
+                            <Label htmlFor="channel_id">渠道 ID</Label>
+                            <Input 
+                                id="channel_id"
+                                name="channel_id"
+                                value={channel_id}
+                                onChange={handleInputChange}
+                                placeholder="请输入渠道 ID"
+                            />
+                        </div>
+                        <div className="flex-1 space-y-2">
+                            <Label htmlFor="task_id">任务 ID</Label>
+                            <Input 
+                                id="task_id"
+                                name="task_id"
+                                value={task_id}
+                                onChange={handleInputChange}
+                                placeholder="请输入任务 ID"
+                            />
+                        </div>
+                        <div className="flex-1 space-y-2">
+                            <Label htmlFor="start_timestamp">开始时间</Label>
+                            <Input 
+                                id="start_timestamp"
+                                name="start_timestamp"
+                                value={start_timestamp}
+                                onChange={handleInputChange}
+                                placeholder="请输入开始时间"
+                            />
+                        </div>
+                        <div className="flex-1 space-y-2">
+                            <Label htmlFor="end_timestamp">结束时间</Label>
+                            <Input 
+                                id="end_timestamp"
+                                name="end_timestamp"
+                                value={end_timestamp}
+                                onChange={handleInputChange}
+                                placeholder="请输入结束时间"
+                            />
+                        </div>
+                        <Button 
+                            type="button" 
+                            className="md:mb-0" 
+                            onClick={() => loadLogs(0)}
+                        >
+                            查询
+                        </Button>
+                    </form>
+                </CardContent>
+            </Card>
 
-            <Layout>
-                <Form layout='horizontal' labelPosition='inset'>
-                    <>
-                        {isAdminUser && <Form.Input field="channel_id" label='渠道 ID' style={{ width: '236px', marginBottom: '10px' }} value={channel_id}
-                                                    placeholder={'可选值'} name='channel_id'
-                                                    onChange={value => handleInputChange(value, 'channel_id')} />
-                        }
-                        <Form.Input field="task_id" label={"任务 ID"} style={{ width: '236px', marginBottom: '10px' }} value={task_id}
-                            placeholder={"可选值"}
-                            name='task_id'
-                            onChange={value => handleInputChange(value, 'task_id')} />
+            <Card>
+                <CardContent className="pt-4">
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>提交时间</TableHead>
+                                    <TableHead>结束时间</TableHead>
+                                    <TableHead>进度</TableHead>
+                                    <TableHead>花费时间</TableHead>
+                                    {isAdminUser && <TableHead>渠道</TableHead>}
+                                    <TableHead>平台</TableHead>
+                                    <TableHead>类型</TableHead>
+                                    <TableHead>任务ID</TableHead>
+                                    <TableHead>任务状态</TableHead>
+                                    <TableHead>失败原因</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {logs.map((log) => (
+                                    <TableRow key={log.key}>
+                                        <TableCell>{log.submit_time ? renderTimestamp(log.submit_time) : "-"}</TableCell>
+                                        <TableCell>{log.finish_time ? renderTimestamp(log.finish_time) : "-"}</TableCell>
+                                        <TableCell>
+                                            {isNaN(log.progress?.replace('%', '')) ? 
+                                                log.progress : 
+                                                <div className="relative h-10 w-10">
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <span className="text-xs font-medium">
+                                                            {Number(log.progress?.replace('%', '') || 0)}%
+                                                        </span>
+                                                    </div>
+                                                    <svg className="h-10 w-10" viewBox="0 0 36 36">
+                                                        <circle 
+                                                            cx="18" 
+                                                            cy="18" 
+                                                            r="16" 
+                                                            fill="none" 
+                                                            className="stroke-muted-foreground/20" 
+                                                            strokeWidth="2" 
+                                                        />
+                                                        <circle 
+                                                            cx="18" 
+                                                            cy="18" 
+                                                            r="16" 
+                                                            fill="none" 
+                                                            className="stroke-primary" 
+                                                            strokeWidth="2" 
+                                                            strokeDasharray="100" 
+                                                            strokeDashoffset={100 - Number(log.progress?.replace('%', '') || 0)}
+                                                            transform="rotate(-90 18 18)"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                            }
+                                        </TableCell>
+                                        <TableCell>
+                                            {log.finish_time ? renderDuration(log.submit_time, log.finish_time) : "-"}
+                                        </TableCell>
+                                        {isAdminUser && (
+                                            <TableCell>
+                                                <Badge 
+                                                    variant="outline"
+                                                    className={colors[Object.keys(colors)[parseInt(log.channel_id) % Object.keys(colors).length]]}
+                                                    onClick={() => copy(log.channel_id)}
+                                                >
+                                                    {log.channel_id}
+                                                </Badge>
+                                            </TableCell>
+                                        )}
+                                        <TableCell>{renderPlatform(log.platform)}</TableCell>
+                                        <TableCell>{renderType(log.action)}</TableCell>
+                                        <TableCell>
+                                            <span 
+                                                className="cursor-pointer hover:underline" 
+                                                onClick={() => {
+                                                    setModalContent(JSON.stringify(log, null, 2));
+                                                    setIsModalOpen(true);
+                                                }}
+                                            >
+                                                {log.task_id}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>{renderStatus(log.status)}</TableCell>
+                                        <TableCell>
+                                            {!log.fail_reason ? '无' : (
+                                                <span 
+                                                    className="cursor-pointer max-w-[100px] truncate hover:underline" 
+                                                    onClick={() => {
+                                                        setModalContent(log.fail_reason);
+                                                        setIsModalOpen(true);
+                                                    }}
+                                                >
+                                                    {log.fail_reason}
+                                                </span>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {logs.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={isAdminUser ? 10 : 9} className="text-center py-4">
+                                            {loading ? "加载中..." : "暂无数据"}
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    
+                    {/* Pagination could be added here using shadcn pagination component */}
+                </CardContent>
+            </Card>
 
-                        <Form.DatePicker field="start_timestamp" label={"起始时间"} style={{ width: '236px', marginBottom: '10px' }}
-                            initValue={start_timestamp}
-                            value={start_timestamp} type='dateTime'
-                            name='start_timestamp'
-                            onChange={value => handleInputChange(value, 'start_timestamp')} />
-                        <Form.DatePicker field="end_timestamp" fluid label={"结束时间"} style={{ width: '236px', marginBottom: '10px' }}
-                            initValue={end_timestamp}
-                            value={end_timestamp} type='dateTime'
-                            name='end_timestamp'
-                            onChange={value => handleInputChange(value, 'end_timestamp')} />
-                        <Button label={"查询"} type="primary" htmlType="submit" className="btn-margin-right"
-                            onClick={refresh}>查询</Button>
-                    </>
-                </Form>
-                <Card>
-                    <Table columns={columns} dataSource={pageData} pagination={{
-                        currentPage: activePage,
-                        pageSize: ITEMS_PER_PAGE,
-                        total: logCount,
-                        pageSizeOpts: [10, 20, 50, 100],
-                        onPageChange: handlePageChange,
-                    }} loading={loading} />
-                </Card>
-                <Modal
-                    visible={isModalOpen}
-                    onOk={() => setIsModalOpen(false)}
-                    onCancel={() => setIsModalOpen(false)}
-                    closable={null}
-                    bodyStyle={{ height: '400px', overflow: 'auto' }} // 设置模态框内容区域样式
-                    width={800} // 设置模态框宽度
-                >
-                    <p style={{ whiteSpace: 'pre-line' }}>{modalContent}</p>
-                </Modal>
-            </Layout>
-        </>
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>详细信息</DialogTitle>
+                    </DialogHeader>
+                    <div className="max-h-[50vh] overflow-auto">
+                        <pre className="bg-muted p-4 rounded-md whitespace-pre-wrap break-words font-mono text-sm">
+                            {modalContent}
+                        </pre>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => setIsModalOpen(false)}>关闭</Button>
+                        <Button 
+                            variant="outline" 
+                            onClick={() => {
+                                copy(modalContent);
+                                showSuccess('已复制到剪贴板');
+                            }}
+                        >
+                            复制
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
     );
 };
 

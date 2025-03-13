@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import {
   API,
   copy,
@@ -7,20 +6,52 @@ import {
   showSuccess,
   timestamp2string,
 } from '../helpers';
-
 import {
-  Banner,
-  Button,
-  Form,
-  ImagePreview,
-  Layout,
-  Modal,
-  Progress,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from './ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from './ui/dialog';
+import { Eye, Image, RefreshCw, Search, X } from 'lucide-react';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from './ui/pagination';
+import React, { useEffect, useState } from 'react';
+import {
   Table,
-  Tag,
-  Typography,
-} from '@douyinfe/semi-ui';
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 import { ITEMS_PER_PAGE } from '../constants';
+import { Input } from './ui/input';
+import { renderQuota } from '../helpers/render';
 import { useTranslation } from 'react-i18next';
 
 const colors = [
@@ -41,114 +72,126 @@ const colors = [
   'yellow',
 ];
 
-const LogsTable = () => {
+const MjLogsTable = () => {
   const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState('');
+  const [modalImageUrl, setModalImageUrl] = useState('');
+  const [isModalOpenurl, setIsModalOpenurl] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activePage, setActivePage] = useState(1);
+  const [logCount, setLogCount] = useState(ITEMS_PER_PAGE);
+  const [logType, setLogType] = useState(0);
+  const isAdminUser = isAdmin();
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searching, setSearching] = useState(false);
+
   function renderType(type) {
     
     switch (type) {
       case 'IMAGINE':
         return (
-          <Tag color='blue' size='large'>
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
             {t('绘图')}
-          </Tag>
+          </Badge>
         );
       case 'UPSCALE':
         return (
-          <Tag color='orange' size='large'>
+          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
             {t('放大')}
-          </Tag>
+          </Badge>
         );
       case 'VARIATION':
         return (
-          <Tag color='purple' size='large'>
+          <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
             {t('变换')}
-          </Tag>
+          </Badge>
         );
       case 'HIGH_VARIATION':
         return (
-          <Tag color='purple' size='large'>
+          <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
             {t('强变换')}
-          </Tag>
+          </Badge>
         );
       case 'LOW_VARIATION':
         return (
-          <Tag color='purple' size='large'>
+          <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
             {t('弱变换')}
-          </Tag>
+          </Badge>
         );
       case 'PAN':
         return (
-          <Tag color='cyan' size='large'>
+          <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">
             {t('平移')}
-          </Tag>
+          </Badge>
         );
       case 'DESCRIBE':
         return (
-          <Tag color='yellow' size='large'>
+          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
             {t('图生文')}
-          </Tag>
+          </Badge>
         );
       case 'BLEND':
         return (
-          <Tag color='lime' size='large'>
+          <Badge className="bg-lime-100 text-lime-800 hover:bg-lime-100">
             {t('图混合')}
-          </Tag>
+          </Badge>
         );
       case 'UPLOAD':
         return (
-            <Tag color='blue' size='large'>
-              上传文件
-            </Tag>
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            上传文件
+          </Badge>
         );
       case 'SHORTEN':
         return (
-          <Tag color='pink' size='large'>
+          <Badge className="bg-pink-100 text-pink-800 hover:bg-pink-100">
             {t('缩词')}
-          </Tag>
+          </Badge>
         );
       case 'REROLL':
         return (
-          <Tag color='indigo' size='large'>
+          <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100">
             {t('重绘')}
-          </Tag>
+          </Badge>
         );
       case 'INPAINT':
         return (
-          <Tag color='violet' size='large'>
+          <Badge className="bg-violet-100 text-violet-800 hover:bg-violet-100">
             {t('局部重绘-提交')}
-          </Tag>
+          </Badge>
         );
       case 'ZOOM':
         return (
-          <Tag color='teal' size='large'>
+          <Badge className="bg-teal-100 text-teal-800 hover:bg-teal-100">
             {t('变焦')}
-          </Tag>
+          </Badge>
         );
       case 'CUSTOM_ZOOM':
         return (
-          <Tag color='teal' size='large'>
+          <Badge className="bg-teal-100 text-teal-800 hover:bg-teal-100">
             {t('自定义变焦-提交')}
-          </Tag>
+          </Badge>
         );
       case 'MODAL':
         return (
-          <Tag color='green' size='large'>
+          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
             {t('窗口处理')}
-          </Tag>
+          </Badge>
         );
       case 'SWAP_FACE':
         return (
-          <Tag color='light-green' size='large'>
+          <Badge className="bg-light-green-100 text-light-green-800 hover:bg-light-green-100">
             {t('换脸')}
-          </Tag>
+          </Badge>
         );
       default:
         return (
-          <Tag color='white' size='large'>
+          <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
             {t('未知')}
-          </Tag>
+          </Badge>
         );
     }
   }
@@ -158,33 +201,33 @@ const LogsTable = () => {
     switch (code) {
       case 1:
         return (
-          <Tag color='green' size='large'>
+          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
             {t('已提交')}
-          </Tag>
+          </Badge>
         );
       case 21:
         return (
-          <Tag color='lime' size='large'>
+          <Badge className="bg-lime-100 text-lime-800 hover:bg-lime-100">
             {t('等待中')}
-          </Tag>
+          </Badge>
         );
       case 22:
         return (
-          <Tag color='orange' size='large'>
+          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
             {t('重复提交')}
-          </Tag>
+          </Badge>
         );
       case 0:
         return (
-          <Tag color='yellow' size='large'>
+          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
             {t('未提交')}
-          </Tag>
+          </Badge>
         );
       default:
         return (
-          <Tag color='white' size='large'>
+          <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
             {t('未知')}
-          </Tag>
+          </Badge>
         );
     }
   }
@@ -194,45 +237,45 @@ const LogsTable = () => {
     switch (type) {
       case 'SUCCESS':
         return (
-          <Tag color='green' size='large'>
+          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
             {t('成功')}
-          </Tag>
+          </Badge>
         );
       case 'NOT_START':
         return (
-          <Tag color='grey' size='large'>
+          <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
             {t('未启动')}
-          </Tag>
+          </Badge>
         );
       case 'SUBMITTED':
         return (
-          <Tag color='yellow' size='large'>
+          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
             {t('队列中')}
-          </Tag>
+          </Badge>
         );
       case 'IN_PROGRESS':
         return (
-          <Tag color='blue' size='large'>
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
             {t('执行中')}
-          </Tag>
+          </Badge>
         );
       case 'FAILURE':
         return (
-          <Tag color='red' size='large'>
+          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
             {t('失败')}
-          </Tag>
+          </Badge>
         );
       case 'MODAL':
         return (
-          <Tag color='yellow' size='large'>
+          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
             {t('窗口等待')}
-          </Tag>
+          </Badge>
         );
       default:
         return (
-          <Tag color='white' size='large'>
+          <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
             {t('未知')}
-          </Tag>
+          </Badge>
         );
     }
   }
@@ -261,9 +304,9 @@ const LogsTable = () => {
     const color = durationSec > 60 ? 'red' : 'green';
 
     return (
-      <Tag color={color} size="large">
+      <Badge className={`bg-${color}-100 text-${color}-800 hover:bg-${color}-100`}>
         {durationSec} {t('秒')}
-      </Tag>
+      </Badge>
     );
   }
   const columns = [
@@ -290,16 +333,15 @@ const LogsTable = () => {
       render: (text, record, index) => {
         return (
           <div>
-            <Tag
-              color={colors[parseInt(text) % colors.length]}
-              size='large'
+            <Badge
+              className={`bg-${colors[parseInt(text) % colors.length]} text-${colors[parseInt(text) % colors.length]} hover:bg-${colors[parseInt(text) % colors.length]}`}
               onClick={() => {
                 copyText(text); // 假设copyText是用于文本复制的函数
               }}
             >
               {' '}
               {text}{' '}
-            </Tag>
+            </Badge>
           </div>
         );
       },
@@ -342,15 +384,13 @@ const LogsTable = () => {
           <div>
             {
               // 转换例如100%为数字100，如果text未定义，返回0
-              <Progress
-                stroke={
+              <Badge
+                className={
                   record.status === 'FAILURE'
-                    ? 'var(--semi-color-warning)'
+                    ? 'bg-warning'
                     : null
                 }
-                percent={text ? parseInt(text.replace('%', '')) : 0}
-                showInfo={true}
-                aria-label='drawing progress'
+                value={text ? parseInt(text.replace('%', '')) : 0}
               />
             }
           </div>
@@ -386,16 +426,28 @@ const LogsTable = () => {
         }
 
         return (
-          <Typography.Text
-            ellipsis={{ showTooltip: true }}
-            style={{ width: 100 }}
-            onClick={() => {
-              setModalContent(text);
-              setIsModalOpen(true);
-            }}
-          >
-            {text}
-          </Typography.Text>
+          <div className="max-w-md truncate">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs font-normal"
+                    onClick={() => {
+                      setModalContent(text);
+                      setIsModalOpen(true);
+                    }}
+                  >
+                    {text.slice(0, 50) + (text.length > 50 ? '...' : '')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('查看完整关键词')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         );
       },
     },
@@ -409,16 +461,28 @@ const LogsTable = () => {
         }
 
         return (
-          <Typography.Text
-            ellipsis={{ showTooltip: true }}
-            style={{ width: 100 }}
-            onClick={() => {
-              setModalContent(text);
-              setIsModalOpen(true);
-            }}
-          >
-            {text}
-          </Typography.Text>
+          <div className="max-w-md truncate">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs font-normal"
+                    onClick={() => {
+                      setModalContent(text);
+                      setIsModalOpen(true);
+                    }}
+                  >
+                    {text.slice(0, 50) + (text.length > 50 ? '...' : '')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('查看完整关键词')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         );
       },
     },
@@ -432,106 +496,44 @@ const LogsTable = () => {
         }
 
         return (
-          <Typography.Text
-            ellipsis={{ showTooltip: true }}
-            style={{ width: 100 }}
-            onClick={() => {
-              setModalContent(text);
-              setIsModalOpen(true);
-            }}
-          >
-            {text}
-          </Typography.Text>
+          <div className="max-w-md truncate">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs font-normal"
+                    onClick={() => {
+                      setModalContent(text);
+                      setIsModalOpen(true);
+                    }}
+                  >
+                    {text.slice(0, 50) + (text.length > 50 ? '...' : '')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('查看失败原因')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         );
       },
     },
   ];
 
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activePage, setActivePage] = useState(1);
-  const [logCount, setLogCount] = useState(ITEMS_PER_PAGE);
-  const [logType, setLogType] = useState(0);
-  const isAdminUser = isAdmin();
-  const [isModalOpenurl, setIsModalOpenurl] = useState(false);
-  const [showBanner, setShowBanner] = useState(false);
+  const [modalImageOpen, setModalImageOpen] = useState(false);
+  const [modalTextOpen, setModalTextOpen] = useState(false);
 
-  // 定义模态框图片URL的状态和更新函数
-  const [modalImageUrl, setModalImageUrl] = useState('');
-  let now = new Date();
-  // 初始化start_timestamp为前一天
-  const [inputs, setInputs] = useState({
-    channel_id: '',
-    mj_id: '',
-    start_timestamp: timestamp2string(now.getTime() / 1000 - 2592000),
-    end_timestamp: timestamp2string(now.getTime() / 1000 + 3600),
-  });
-  const { channel_id, mj_id, start_timestamp, end_timestamp } = inputs;
-
-  const [stat, setStat] = useState({
-    quota: 0,
-    token: 0,
-  });
-
-  const handleInputChange = (value, name) => {
-    setInputs((inputs) => ({ ...inputs, [name]: value }));
+  const showPrompt = async (taskId, prompt) => {
+    setModalContent(prompt);
+    setModalTextOpen(true);
   };
 
-  const setLogsFormat = (logs) => {
-    for (let i = 0; i < logs.length; i++) {
-      logs[i].timestamp2string = timestamp2string(logs[i].created_at);
-      logs[i].key = '' + logs[i].id;
-    }
-    // data.key = '' + data.id
-    setLogs(logs);
-    setLogCount(logs.length + ITEMS_PER_PAGE);
-    // console.log(logCount);
-  };
-
-  const loadLogs = async (startIdx) => {
-    setLoading(true);
-
-    let url = '';
-    let localStartTimestamp = Date.parse(start_timestamp);
-    let localEndTimestamp = Date.parse(end_timestamp);
-    if (isAdminUser) {
-      url = `/api/mj/?p=${startIdx}&channel_id=${channel_id}&mj_id=${mj_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`;
-    } else {
-      url = `/api/mj/self/?p=${startIdx}&mj_id=${mj_id}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`;
-    }
-    const res = await API.get(url);
-    const { success, message, data } = res.data;
-    if (success) {
-      if (startIdx === 0) {
-        setLogsFormat(data);
-      } else {
-        let newLogs = [...logs];
-        newLogs.splice(startIdx * ITEMS_PER_PAGE, data.length, ...data);
-        setLogsFormat(newLogs);
-      }
-    } else {
-      showError(message);
-    }
-    setLoading(false);
-  };
-
-  const pageData = logs.slice(
-    (activePage - 1) * ITEMS_PER_PAGE,
-    activePage * ITEMS_PER_PAGE,
-  );
-
-  const handlePageChange = (page) => {
-    setActivePage(page);
-    if (page === Math.ceil(logs.length / ITEMS_PER_PAGE) + 1) {
-      // In this case we have to load more data and then append them.
-      loadLogs(page - 1).then((r) => {});
-    }
-  };
-
-  const refresh = async () => {
-    // setLoading(true);
-    setActivePage(1);
-    await loadLogs(0);
+  const showImage = async (id) => {
+    setModalImageUrl(id);
+    setModalImageOpen(true);
   };
 
   const copyText = async (text) => {
@@ -543,9 +545,56 @@ const LogsTable = () => {
     }
   };
 
+  const loadLogs = async (page) => {
+    setLoading(true);
+    const url = searchKeyword === '' 
+      ? `/api/midjourney/task/?p=${page}` 
+      : `/api/midjourney/task/?p=${page}&keyword=${searchKeyword}`;
+    try {
+      const res = await API.get(url);
+      const { success, message, data } = res.data;
+      if (success) {
+        setLogs(data.data);
+        setLogCount(data.total);
+      } else {
+        showError(message);
+      }
+      setLoading(false);
+    } catch (error) {
+      showError(error.message);
+      setLoading(false);
+    }
+  };
+
+  const onPageChange = (page) => {
+    setActivePage(page);
+    loadLogs(page);
+  };
+
+  const refresh = async () => {
+    await loadLogs(activePage);
+  };
+
+  const searchLogs = async () => {
+    setSearching(true);
+    setActivePage(1);
+    await loadLogs(1);
+    setSearching(false);
+  };
+
+  const handleKeywordChange = (value) => {
+    setSearchKeyword(value);
+  };
+
+  const handleKeywordKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      searchLogs().then();
+    }
+  };
+
   useEffect(() => {
-    refresh().then();
-  }, [logType]);
+    loadLogs(1).then();
+  }, []);
 
   useEffect(() => {
     const mjNotifyEnabled = localStorage.getItem('mj_notify_enabled');
@@ -623,13 +672,13 @@ const LogsTable = () => {
         <Table
           style={{ marginTop: 5 }}
           columns={columns}
-          dataSource={pageData}
+          dataSource={logs}
           pagination={{
             currentPage: activePage,
             pageSize: ITEMS_PER_PAGE,
             total: logCount,
             pageSizeOpts: [10, 20, 50, 100],
-            onPageChange: handlePageChange,
+            onPageChange: onPageChange,
             formatPageText: (page) =>
               t('第 {{start}} - {{end}} 条，共 {{total}} 条', {
                 start: page.currentStart,
@@ -659,4 +708,4 @@ const LogsTable = () => {
   );
 };
 
-export default LogsTable;
+export default MjLogsTable;

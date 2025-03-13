@@ -1,10 +1,24 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
-import { Banner, Button, Col, Form, Row, Modal, Space } from '@douyinfe/semi-ui';
 import { API, showError, showSuccess, timestamp2string } from '../helpers';
+import { Alert, AlertDescription } from './ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from './ui/dialog';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from './ui/form';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+
+// Shadcn UI components
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { StatusContext } from '../context/Status/index.js';
+import { Textarea } from './ui/textarea';
 import { marked } from 'marked';
 import { useTranslation } from 'react-i18next';
-import { StatusContext } from '../context/Status/index.js';
-import Text from '@douyinfe/semi-ui/lib/es/typography/text';
 
 const OtherSetting = () => {
   const { t } = useTranslation();
@@ -226,143 +240,149 @@ const OtherSetting = () => {
   };
 
   return (
-    <Row>
-      <Col span={24}>
-        {/* 版本信息 */}
-        <Form style={{ marginBottom: 15 }}>
-          <Form.Section text={t('系统信息')}>
-            <Row>
-              <Col span={16}>
-                <Space>
-                  <Text>
-                    {t('当前版本')}：{statusState?.status?.version || t('未知')}
-                  </Text>
-                  <Button type="primary" onClick={checkUpdate} loading={loadingInput['CheckUpdate']}>
-                    {t('检查更新')}
-                  </Button>
-                </Space>
-              </Col>
-            </Row>
-            <Row>
-              <Col span={16}>
-                <Text>{t('启动时间')}：{getStartTimeString()}</Text>
-              </Col>
-            </Row>
-          </Form.Section>
-        </Form>
-        {/* 通用设置 */}
-        <Form
-          values={inputs}
-          getFormApi={(formAPI) => (formAPISettingGeneral.current = formAPI)}
-          style={{ marginBottom: 15 }}
-        >
-          <Form.Section text={t('通用设置')}>
-            <Form.TextArea
-              label={t('公告')}
-              placeholder={t('在此输入新的公告内容，支持 Markdown & HTML 代码')}
-              field={'Notice'}
-              onChange={handleInputChange}
-              style={{ fontFamily: 'JetBrains Mono, Consolas' }}
-              autosize={{ minRows: 6, maxRows: 12 }}
-            />
-            <Button onClick={submitNotice} loading={loadingInput['Notice']}>
-              {t('设置公告')}
-            </Button>
-          </Form.Section>
-        </Form>
-        {/* 个性化设置 */}
-        <Form
-          values={inputs}
-          getFormApi={(formAPI) => (formAPIPersonalization.current = formAPI)}
-          style={{ marginBottom: 15 }}
-        >
-          <Form.Section text={t('个性化设置')}>
-            <Form.Input
-              label={t('系统名称')}
-              placeholder={t('在此输入系统名称')}
-              field={'SystemName'}
-              onChange={handleInputChange}
-            />
-            <Button
-              onClick={submitSystemName}
-              loading={loadingInput['SystemName']}
+    <div className="space-y-6">
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>{t('其他设置')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="SystemName">{t('系统名称')}</Label>
+              <div className="flex space-x-2">
+                <Input
+                  id="SystemName"
+                  placeholder={t('在此输入系统名称')}
+                  value={inputs.SystemName}
+                  onChange={(e) => handleInputChange(e.target.value, { target: { id: 'SystemName' } })}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={submitSystemName} 
+                  disabled={loadingInput['SystemName']}
+                >
+                  {loadingInput['SystemName'] ? t('保存中...') : t('设置系统名称')}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="Logo">{t('Logo 图片地址')}</Label>
+              <div className="flex space-x-2">
+                <Input
+                  id="Logo"
+                  placeholder={t('在此输入 Logo 图片地址')}
+                  value={inputs.Logo}
+                  onChange={(e) => handleInputChange(e.target.value, { target: { id: 'Logo' } })}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={submitLogo} 
+                  disabled={loadingInput['Logo']}
+                >
+                  {loadingInput['Logo'] ? t('保存中...') : t('设置 Logo')}
+                </Button>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="Notice">{t('公告')}</Label>
+              <Textarea
+                id="Notice"
+                placeholder={t('在此输入新的公告，支持 Markdown & HTML 代码')}
+                value={inputs.Notice}
+                onChange={(e) => handleInputChange(e.target.value, { target: { id: 'Notice' } })}
+                className="min-h-[150px] font-mono"
+              />
+              <Button 
+                onClick={submitNotice} 
+                disabled={loadingInput['Notice']}
+              >
+                {loadingInput['Notice'] ? t('保存中...') : t('设置公告')}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="HomePageContent">{t('首页内容')}</Label>
+              <Textarea
+                id="HomePageContent"
+                placeholder={t('在此输入首页内容，支持 Markdown & HTML 代码，设置后首页的状态信息将不再显示。如果输入的是一个链接，则会使用该链接作为 iframe 的 src 属性，这允许你设置任意网页作为首页')}
+                value={inputs.HomePageContent}
+                onChange={(e) => handleInputChange(e.target.value, { target: { id: 'HomePageContent' } })}
+                className="min-h-[150px] font-mono"
+              />
+              <Button 
+                onClick={() => submitOption('HomePageContent')} 
+                disabled={loadingInput['HomePageContent']}
+              >
+                {loadingInput['HomePageContent'] ? t('保存中...') : t('设置首页内容')}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="About">{t('关于')}</Label>
+              <Textarea
+                id="About"
+                placeholder={t('在此输入新的关于内容，支持 Markdown & HTML 代码。如果输入的是一个链接，则会使用该链接作为 iframe 的 src 属性，这允许你设置任意网页作为关于页面')}
+                value={inputs.About}
+                onChange={(e) => handleInputChange(e.target.value, { target: { id: 'About' } })}
+                className="min-h-[150px] font-mono"
+              />
+              <Button 
+                onClick={submitAbout} 
+                disabled={loadingInput['About']}
+              >
+                {loadingInput['About'] ? t('保存中...') : t('设置关于')}
+              </Button>
+            </div>
+
+            <Alert className="my-4">
+              <AlertDescription>
+                {t('移除 One API 的版权标识必须首先获得授权，项目维护需要花费大量精力，如果本项目对你有意义，请主动支持本项目')}
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2">
+              <Label htmlFor="Footer">{t('页脚')}</Label>
+              <div className="flex space-x-2">
+                <Input
+                  id="Footer"
+                  placeholder={t('在此输入新的页脚，留空则使用默认页脚，支持 HTML 代码')}
+                  value={inputs.Footer}
+                  onChange={(e) => handleInputChange(e.target.value, { target: { id: 'Footer' } })}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={submitFooter} 
+                  disabled={loadingInput['Footer']}
+                >
+                  {loadingInput['Footer'] ? t('保存中...') : t('设置页脚')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={showUpdateModal} onOpenChange={setShowUpdateModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('新版本') + '：' + updateData.tag_name}</DialogTitle>
+          </DialogHeader>
+          <div dangerouslySetInnerHTML={{ __html: updateData.content }}></div>
+          <DialogFooter>
+            <Button 
+              onClick={() => {
+                setShowUpdateModal(false);
+                openGitHubRelease();
+              }}
             >
-              {t('设置系统名称')}
+              {t('详情')}
             </Button>
-            <Form.Input
-              label={t('Logo 图片地址')}
-              placeholder={t('在此输入 Logo 图片地址')}
-              field={'Logo'}
-              onChange={handleInputChange}
-            />
-            <Button onClick={submitLogo} loading={loadingInput['Logo']}>
-              {t('设置 Logo')}
-            </Button>
-            <Form.TextArea
-              label={t('首页内容')}
-              placeholder={t('在此输入首页内容，支持 Markdown & HTML 代码，设置后首页的状态信息将不再显示。如果输入的是一个链接，则会使用该链接作为 iframe 的 src 属性，这允许你设置任意网页作为首页')}
-              field={'HomePageContent'}
-              onChange={handleInputChange}
-              style={{ fontFamily: 'JetBrains Mono, Consolas' }}
-              autosize={{ minRows: 6, maxRows: 12 }}
-            />
-            <Button
-              onClick={() => submitOption('HomePageContent')}
-              loading={loadingInput['HomePageContent']}
-            >
-              {t('设置首页内容')}
-            </Button>
-            <Form.TextArea
-              label={t('关于')}
-              placeholder={t('在此输入新的关于内容，支持 Markdown & HTML 代码。如果输入的是一个链接，则会使用该链接作为 iframe 的 src 属性，这允许你设置任意网页作为关于页面')}
-              field={'About'}
-              onChange={handleInputChange}
-              style={{ fontFamily: 'JetBrains Mono, Consolas' }}
-              autosize={{ minRows: 6, maxRows: 12 }}
-            />
-            <Button onClick={submitAbout} loading={loadingInput['About']}>
-              {t('设置关于')}
-            </Button>
-            {/*  */}
-            <Banner
-              fullMode={false}
-              type='info'
-              description={t('移除 One API 的版权标识必须首先获得授权，项目维护需要花费大量精力，如果本项目对你有意义，请主动支持本项目')}
-              closeIcon={null}
-              style={{ marginTop: 15 }}
-            />
-            <Form.Input
-              label={t('页脚')}
-              placeholder={t('在此输入新的页脚，留空则使用默认页脚，支持 HTML 代码')}
-              field={'Footer'}
-              onChange={handleInputChange}
-            />
-            <Button onClick={submitFooter} loading={loadingInput['Footer']}>
-              {t('设置页脚')}
-            </Button>
-          </Form.Section>
-        </Form>
-      </Col>
-      <Modal
-        title={t('新版本') + '：' + updateData.tag_name}
-        visible={showUpdateModal}
-        onCancel={() => setShowUpdateModal(false)}
-        footer={[
-          <Button 
-            key="details" 
-            type="primary" 
-            onClick={() => {
-              setShowUpdateModal(false);
-              openGitHubRelease();
-            }}
-          >
-            {t('详情')}
-          </Button>
-        ]}
-      >
-        <div dangerouslySetInnerHTML={{ __html: updateData.content }}></div>
-      </Modal>
-    </Row>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

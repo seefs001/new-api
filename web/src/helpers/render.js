@@ -1,6 +1,14 @@
-import i18next from 'i18next';
-import { Modal, Tag, Typography } from '@douyinfe/semi-ui';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from '../components/ui/dialog';
 import { copy, isMobile, showSuccess } from './utils.js';
+
+import { Badge } from '../components/ui/badge';
+import { Typography } from '../components/ui/typography';
+import i18next from 'i18next';
 
 export function renderText(text, limit) {
   if (text.length > limit) {
@@ -17,17 +25,17 @@ export function renderText(text, limit) {
 export function renderGroup(group) {
   if (group === '') {
     return (
-      <Tag size='large' key='default' color='orange'>
+      <Badge key='default' variant="outline" className="text-orange-500 border-orange-500">
         {i18next.t('用户分组')}
-      </Tag>
+      </Badge>
     );
   }
 
   const tagColors = {
-    vip: 'yellow',
-    pro: 'yellow',
-    svip: 'red',
-    premium: 'red',
+    vip: 'text-yellow-500 border-yellow-500',
+    pro: 'text-yellow-500 border-yellow-500',
+    svip: 'text-red-500 border-red-500',
+    premium: 'text-red-500 border-red-500',
   };
 
   const groups = group.split(',').sort();
@@ -35,36 +43,62 @@ export function renderGroup(group) {
   return (
     <span key={group}>
       {groups.map((group) => (
-        <Tag
-          size='large'
-          color={tagColors[group] || stringToColor(group)}
+        <Badge
+          variant="outline"
+          className={tagColors[group] || `text-${stringToColor(group)}-500 border-${stringToColor(group)}-500`}
           key={group}
           onClick={async (event) => {
             event.stopPropagation();
             if (await copy(group)) {
               showSuccess(i18next.t('已复制：') + group);
             } else {
-              Modal.error({ title: t('无法复制到剪贴板，请手动复制'), content: group });
+              showErrorModal(t('无法复制到剪贴板，请手动复制'), group);
             }
           }}
         >
           {group}
-        </Tag>
+        </Badge>
       ))}
     </span>
   );
 }
 
 export function renderRatio(ratio) {
-  let color = 'green';
+  let colorClass = 'text-green-500 border-green-500';
   if (ratio > 5) {
-    color = 'red';
+    colorClass = 'text-red-500 border-red-500';
   } else if (ratio > 3) {
-    color = 'orange';
+    colorClass = 'text-orange-500 border-orange-500';
   } else if (ratio > 1) {
-    color = 'blue';
+    colorClass = 'text-blue-500 border-blue-500';
   }
-  return <Tag color={color}>{ratio}x {i18next.t('倍率')}</Tag>;
+  return <Badge variant="outline" className={colorClass}>{ratio}x {i18next.t('倍率')}</Badge>;
+}
+
+// Helper function to show error dialog
+function showErrorModal(title, content) {
+  // Create a modal element that will be rendered directly to the DOM
+  const modalRoot = document.createElement('div');
+  modalRoot.className = 'modal-root';
+  document.body.appendChild(modalRoot);
+
+  // Render the dialog 
+  const dialogContent = (
+    <Dialog open={true} onOpenChange={() => {
+      document.body.removeChild(modalRoot);
+    }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="p-4">{content}</div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  // Use ReactDOM to render the dialog
+  const ReactDOM = require('react-dom');
+  ReactDOM.render(dialogContent, modalRoot);
 }
 
 const measureTextWidth = (text, style = {
@@ -150,21 +184,13 @@ export const renderGroupOption = (item) => {
     ...rest
   } = item;
   
-  const baseStyle = {
-    display: 'flex', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    padding: '8px 16px',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    backgroundColor: focused ? 'var(--semi-color-fill-0)' : 'transparent',
-    opacity: disabled ? 0.5 : 1,
-    ...(selected && {
-      backgroundColor: 'var(--semi-color-primary-light-default)',
-    }),
-    '&:hover': {
-      backgroundColor: !disabled && 'var(--semi-color-fill-1)'
-    }
-  };
+  const baseClassName = `
+    flex justify-between items-center p-4
+    ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+    ${focused ? 'bg-accent' : 'bg-transparent'}
+    ${selected ? 'bg-primary/10' : ''}
+    ${disabled ? '' : 'hover:bg-accent/50'}
+  `;
 
   const handleClick = () => {
     if (!disabled && onClick) {
@@ -180,17 +206,17 @@ export const renderGroupOption = (item) => {
   
   return (
     <div 
-      style={baseStyle}
+      className={baseClassName}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <Typography.Text strong type={disabled ? 'tertiary' : undefined}>
+      <div className="flex flex-col gap-1">
+        <span className={`font-medium ${disabled ? 'text-muted-foreground' : ''}`}>
           {value}
-        </Typography.Text>
-        <Typography.Text type="secondary" size="small">
+        </span>
+        <span className="text-sm text-muted-foreground">
           {label}
-        </Typography.Text>
+        </span>
       </div>
       {item.ratio && renderRatio(item.ratio)}
     </div>

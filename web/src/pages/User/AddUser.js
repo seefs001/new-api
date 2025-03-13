@@ -1,7 +1,11 @@
+import { API, showError, showSuccess } from '../../helpers';
 import React, { useState } from 'react';
-import { API, isMobile, showError, showSuccess } from '../../helpers';
-import Title from '@douyinfe/semi-ui/lib/es/typography/title';
-import { Button, Input, SideSheet, Space, Spin } from '@douyinfe/semi-ui';
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "../../components/ui/sheet";
+
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Loader2 } from "lucide-react";
 
 const AddUser = (props) => {
   const originInputs = {
@@ -42,69 +46,74 @@ const AddUser = (props) => {
   };
 
   return (
-    <>
-      <SideSheet
-        placement={'left'}
-        title={<Title level={3}>{'添加用户'}</Title>}
-        headerStyle={{ borderBottom: '1px solid var(--semi-color-border)' }}
-        bodyStyle={{ borderBottom: '1px solid var(--semi-color-border)' }}
-        visible={props.visible}
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Space>
-              <Button theme='solid' size={'large'} onClick={submit}>
-                提交
-              </Button>
-              <Button
-                theme='solid'
-                size={'large'}
-                type={'tertiary'}
-                onClick={handleCancel}
-              >
-                取消
-              </Button>
-            </Space>
+    <Sheet open={props.visible} onOpenChange={handleCancel}>
+      <SheetContent side="left" className="sm:max-w-xl overflow-y-auto">
+        <SheetHeader className="border-b pb-4">
+          <SheetTitle>添加用户</SheetTitle>
+        </SheetHeader>
+        
+        <div className="space-y-6 py-6">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-50">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
+          
+          <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="username">用户名</Label>
+                <Input
+                  id="username"
+                  className="mt-1"
+                  placeholder="请输入用户名"
+                  onChange={(e) => handleInputChange('username', e.target.value)}
+                  value={username}
+                  autoComplete="off"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="display_name">显示名称</Label>
+                <Input
+                  id="display_name"
+                  className="mt-1"
+                  placeholder="请输入显示名称"
+                  onChange={(e) => handleInputChange('display_name', e.target.value)}
+                  value={display_name}
+                  autoComplete="off"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="password">密码</Label>
+                <Input
+                  id="password"
+                  className="mt-1"
+                  type="password"
+                  placeholder="请输入密码"
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  value={password}
+                  autoComplete="off"
+                />
+              </div>
+            </div>
           </div>
-        }
-        closeIcon={null}
-        onCancel={() => handleCancel()}
-        width={isMobile() ? '100%' : 600}
-      >
-        <Spin spinning={loading}>
-          <Input
-            style={{ marginTop: 20 }}
-            label='用户名'
-            name='username'
-            addonBefore={'用户名'}
-            placeholder={'请输入用户名'}
-            onChange={(value) => handleInputChange('username', value)}
-            value={username}
-            autoComplete='off'
-          />
-          <Input
-            style={{ marginTop: 20 }}
-            addonBefore={'显示名'}
-            label='显示名称'
-            name='display_name'
-            autoComplete='off'
-            placeholder={'请输入显示名称'}
-            onChange={(value) => handleInputChange('display_name', value)}
-            value={display_name}
-          />
-          <Input
-            style={{ marginTop: 20 }}
-            label='密 码'
-            name='password'
-            type={'password'}
-            addonBefore={'密码'}
-            placeholder={'请输入密码'}
-            onChange={(value) => handleInputChange('password', value)}
-            value={password}
-            autoComplete='off'
-          />
-        </Spin>
-      </SideSheet>
-    </>
+        </div>
+        
+        <SheetFooter className="pt-4 border-t">
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={handleCancel}>
+              取消
+            </Button>
+            <Button onClick={submit} disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              提交
+            </Button>
+          </div>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 };
 

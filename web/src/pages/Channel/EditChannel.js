@@ -1,6 +1,3 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import {
   API,
   isMobile,
@@ -9,24 +6,36 @@ import {
   showSuccess,
   verifyJSON
 } from '../../helpers';
-import { CHANNEL_OPTIONS } from '../../constants';
-import Title from '@douyinfe/semi-ui/lib/es/typography/title';
+import { Alert, AlertDescription } from "../../components/ui/alert";
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  SideSheet,
-  Space,
-  Spin,
-  Button,
-  Tooltip,
-  Input,
-  Typography,
   Select,
-  TextArea,
-  Checkbox,
-  Banner
-} from '@douyinfe/semi-ui';
-import { Divider } from 'semantic-ui-react';
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "../../components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle
+} from "../../components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../components/ui/tooltip";
 import { getChannelModels, loadChannelModels } from '../../components/utils.js';
+import { useNavigate, useParams } from 'react-router-dom';
+
+import { Button } from "../../components/ui/button";
+import { CHANNEL_OPTIONS } from '../../constants';
+import { Checkbox } from "../../components/ui/checkbox";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Loader2 } from "lucide-react";
+import { Separator } from "../../components/ui/separator";
+import { Textarea } from "../../components/ui/textarea";
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 const MODEL_MAPPING_EXAMPLE = {
   'gpt-3.5-turbo': 'gpt-3.5-turbo-0125'
@@ -374,8 +383,7 @@ const EditChannel = (props) => {
       if (model && !localModels.includes(model)) {
         localModels.push(model);
         localModelOptions.push({
-          key: model,
-          text: model,
+          label: model,
           value: model
         });
       } else if (model) {
@@ -391,657 +399,319 @@ const EditChannel = (props) => {
     handleInputChange('models', localModels);
   };
 
-
   return (
-    <>
-      <SideSheet
-        maskClosable={false}
-        placement={isEdit ? 'right' : 'left'}
-        title={
-          <Title level={3}>{isEdit ? t('更新渠道信息') : t('创建新的渠道')}</Title>
-        }
-        headerStyle={{ borderBottom: '1px solid var(--semi-color-border)' }}
-        bodyStyle={{ borderBottom: '1px solid var(--semi-color-border)' }}
-        visible={props.visible}
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Space>
-              <Button theme="solid" size={'large'} onClick={submit}>
-                {t('提交')}
-              </Button>
-              <Button
-                theme="solid"
-                size={'large'}
-                type={'tertiary'}
-                onClick={handleCancel}
-              >
-                {t('取消')}
-              </Button>
-            </Space>
-          </div>
-        }
-        closeIcon={null}
-        onCancel={() => handleCancel()}
-        width={isMobile() ? '100%' : 600}
-      >
-        <Spin spinning={loading}>
-          <div style={{ marginTop: 10 }}>
-            
-            <Typography.Text strong>{t('类型')}：</Typography.Text>
-          </div>
-          <Select
-            name="type"
-            required
-            optionList={CHANNEL_OPTIONS}
-            value={inputs.type}
-            onChange={(value) => handleInputChange('type', value)}
-            style={{ width: '50%' }}
-            filter
-            searchPosition='dropdown'
-            placeholder={t('请选择渠道类型')}
-          />
-          {inputs.type === 40 && (
-            <div style={{ marginTop: 10 }}>
-              <Banner
-                type="info" 
-                description={
+    <Sheet open={props.visible} onOpenChange={handleCancel}>
+      <SheetContent side={isEdit ? "right" : "left"} className="sm:max-w-xl overflow-y-auto">
+        <SheetHeader className="border-b pb-4">
+          <SheetTitle>{isEdit ? t('更新渠道信息') : t('创建新的渠道')}</SheetTitle>
+        </SheetHeader>
+        
+        <div className="space-y-6 py-6">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-50">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
+          
+          <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="type">{t('类型')}：</Label>
+                <Select 
+                  value={inputs.type.toString()} 
+                  onValueChange={(value) => handleInputChange('type', parseInt(value))}
+                >
+                  <SelectTrigger className="w-full mt-1">
+                    <SelectValue placeholder={t('请选择渠道类型')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CHANNEL_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value.toString()}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {inputs.type === 3 && (
+                <>
+                  <Alert variant="warning">
+                    <AlertDescription>
+                      {t('注意，模型部署名称必须和模型名称保持一致')}
+                    </AlertDescription>
+                  </Alert>
                   <div>
-                    <Typography.Text strong>
-                      {t('邀请链接')}: 
-                    </Typography.Text>
-                    <Typography.Text 
-                      link
-                      underline 
-                      style={{marginLeft: 8}}
-                      onClick={() => window.open('https://cloud.siliconflow.cn/i/hij0YNTZ')}
-                    >
-                      https://cloud.siliconflow.cn/i/hij0YNTZ
-                    </Typography.Text>
+                    <Label htmlFor="azure_base_url">AZURE_OPENAI_ENDPOINT：</Label>
+                    <Input
+                      id="azure_base_url"
+                      className="mt-1"
+                      placeholder={t('请输入 AZURE_OPENAI_ENDPOINT，例如：https://docs-test-001.openai.azure.com')}
+                      onChange={(e) => handleInputChange('base_url', e.target.value)}
+                      value={inputs.base_url}
+                      autoComplete="new-password"
+                    />
                   </div>
-                }
-              />
-            </div>
-          )}
-          {inputs.type === 3 && (
-            <>
-              <div style={{ marginTop: 10 }}>
-                <Banner
-                  type={'warning'}
-                  description={t('注意，模型部署名称必须和模型名称保持一致')}
-                ></Banner>
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>
-                  AZURE_OPENAI_ENDPOINT：
-                </Typography.Text>
-              </div>
-              <Input
-                label="AZURE_OPENAI_ENDPOINT"
-                name="azure_base_url"
-                placeholder={t('请输入 AZURE_OPENAI_ENDPOINT，例如：https://docs-test-001.openai.azure.com')}
-                onChange={(value) => {
-                  handleInputChange('base_url', value);
-                }}
-                value={inputs.base_url}
-                autoComplete="new-password"
-              />
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>{t('默认 API 版本')}：</Typography.Text>
-              </div>
-              <Input
-                label={t('默认 API 版本')}
-                name="azure_other"
-                placeholder={t('请输入默认 API 版本，例如：2024-12-01-preview')}
-                onChange={(value) => {
-                  handleInputChange('other', value);
-                }}
-                value={inputs.other}
-                autoComplete="new-password"
-              />
-            </>
-          )}
-          {inputs.type === 8 && (
-            <>
-              <div style={{ marginTop: 10 }}>
-                <Banner
-                  type={'warning'}
-                  description={t('如果你对接的是上游One API或者New API等转发项目，请使用OpenAI类型，不要使用此类型，除非你知道你在做什么。')}
-                ></Banner>
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>
-                  {t('完整的 Base URL，支持变量{model}')}：
-                </Typography.Text>
-              </div>
-              <Input
-                name="base_url"
-                placeholder={t('请输入完整的URL，例如：https://api.openai.com/v1/chat/completions')}
-                onChange={(value) => {
-                  handleInputChange('base_url', value);
-                }}
-                value={inputs.base_url}
-                autoComplete="new-password"
-              />
-            </>
-          )}
-          <div style={{ marginTop: 10 }}>
-            <Typography.Text strong>{t('名称')}：</Typography.Text>
-          </div>
-          <Input
-            required
-            name="name"
-            placeholder={t('请为渠道命名')}
-            onChange={(value) => {
-              handleInputChange('name', value);
-            }}
-            value={inputs.name}
-            autoComplete="new-password"
-          />
-          {inputs.type !== 3 && inputs.type !== 8 && inputs.type !== 22 && inputs.type !== 36 && inputs.type !== 45 && (
-            <>
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>{t('代理站地址')}：</Typography.Text>
-              </div>
-              <Tooltip content={t('对于官方渠道，new-api已经内置地址，除非是第三方代理站点或者Azure的特殊接入地址，否则不需要填写')}>
-                <Input
-                  label={t('代理站地址')}
-                  name="base_url"
-                  placeholder={t('此项可选，用于通过代理站来进行 API 调用，末尾不要带/v1和/')}
-                  onChange={(value) => {
-                    handleInputChange('base_url', value);
-                  }}
-                  value={inputs.base_url}
-                  autoComplete="new-password"
-                />
-              </Tooltip>
-            </>
-          )}
-          <div style={{ marginTop: 10 }}>
-            <Typography.Text strong>{t('密钥')}：</Typography.Text>
-          </div>
-          {batch ? (
-            <TextArea
-              label={t('密钥')}
-              name="key"
-              required
-              placeholder={t('请输入密钥，一行一个')}
-              onChange={(value) => {
-                handleInputChange('key', value);
-              }}
-              value={inputs.key}
-              style={{ minHeight: 150, fontFamily: 'JetBrains Mono, Consolas' }}
-              autoComplete="new-password"
-            />
-          ) : (
-            <>
-              {inputs.type === 41 ? (
-                <TextArea
-                  label={t('鉴权json')}
-                  name="key"
-                  required
-                  placeholder={'{\n' +
-                    '  "type": "service_account",\n' +
-                    '  "project_id": "abc-bcd-123-456",\n' +
-                    '  "private_key_id": "123xxxxx456",\n' +
-                    '  "private_key": "-----BEGIN PRIVATE KEY-----xxxx\n' +
-                    '  "client_email": "xxx@developer.gserviceaccount.com",\n' +
-                    '  "client_id": "111222333",\n' +
-                    '  "auth_uri": "https://accounts.google.com/o/oauth2/auth",\n' +
-                    '  "token_uri": "https://oauth2.googleapis.com/token",\n' +
-                    '  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",\n' +
-                    '  "client_x509_cert_url": "https://xxxxx.gserviceaccount.com",\n' +
-                    '  "universe_domain": "googleapis.com"\n' +
-                    '}'}
-                  onChange={(value) => {
-                    handleInputChange('key', value);
-                  }}
-                  autosize={{ minRows: 10 }}
-                  value={inputs.key}
-                  autoComplete="new-password"
-                />
-              ) : (
-                <Input
-                  label={t('密钥')}
-                  name="key"
-                  required
-                  placeholder={t(type2secretPrompt(inputs.type))}
-                  onChange={(value) => {
-                    handleInputChange('key', value);
-                  }}
-                  value={inputs.key}
-                  autoComplete="new-password"
-                />
+                  <div>
+                    <Label htmlFor="azure_other">{t('默认 API 版本')}：</Label>
+                    <Input
+                      id="azure_other"
+                      className="mt-1"
+                      placeholder={t('请输入默认 API 版本，例如：2024-12-01-preview')}
+                      onChange={(e) => handleInputChange('other', e.target.value)}
+                      value={inputs.other}
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </>
               )}
-            </>
-          )}
-          {!isEdit && (
-            <div style={{ marginTop: 10, display: 'flex' }}>
-              <Space>
-                <Checkbox
-                  checked={batch}
-                  label={t('批量创建')}
-                  name="batch"
-                  onChange={() => setBatch(!batch)}
+
+              <div>
+                <Label htmlFor="name">{t('名称')}：</Label>
+                <Input
+                  id="name"
+                  className="mt-1"
+                  required
+                  placeholder={t('请为渠道命名')}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  value={inputs.name}
+                  autoComplete="new-password"
                 />
-                <Typography.Text strong>{t('批量创建')}</Typography.Text>
-              </Space>
-            </div>
-          )}
-          {inputs.type === 22 && (
-            <>
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>{t('私有部署地址')}：</Typography.Text>
               </div>
-              <Input
-                name="base_url"
-                placeholder={t('请输入私有部署地址，格式为：https://fastgpt.run/api/openapi')}
-                onChange={(value) => {
-                  handleInputChange('base_url', value);
-                }}
-                value={inputs.base_url}
-                autoComplete="new-password"
-              />
-            </>
-          )}
-          {inputs.type === 36 && (
-            <>
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>
-                  {t('注意非Chat API，请务必填写正确的API地址，否则可能导致无法使用')}
-                </Typography.Text>
+
+              {inputs.type !== 3 && inputs.type !== 8 && inputs.type !== 22 && inputs.type !== 36 && inputs.type !== 45 && (
+                <div>
+                  <Label htmlFor="base_url">{t('代理站地址')}：</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Input
+                          id="base_url"
+                          className="mt-1"
+                          placeholder={t('此项可选，用于通过代理站来进行 API 调用，末尾不要带/v1和/')}
+                          onChange={(e) => handleInputChange('base_url', e.target.value)}
+                          value={inputs.base_url}
+                          autoComplete="new-password"
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t('对于官方渠道，new-api已经内置地址，除非是第三方代理站点或者Azure的特殊接入地址，否则不需要填写')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="key">{t('密钥')}：</Label>
+                {batch ? (
+                  <Textarea
+                    id="key"
+                    className="mt-1 font-mono h-40"
+                    required
+                    placeholder={t('请输入密钥，一行一个')}
+                    onChange={(e) => handleInputChange('key', e.target.value)}
+                    value={inputs.key}
+                    autoComplete="new-password"
+                  />
+                ) : (
+                  <Input
+                    id="key"
+                    className="mt-1"
+                    required
+                    placeholder={t(type2secretPrompt(inputs.type))}
+                    onChange={(e) => handleInputChange('key', e.target.value)}
+                    value={inputs.key}
+                    autoComplete="new-password"
+                  />
+                )}
               </div>
-              <Input
-                name="base_url"
-                placeholder={t('请输入到 /suno 前的路径，通常就是域名，例如：https://api.example.com')}
-                onChange={(value) => {
-                  handleInputChange('base_url', value);
-                }}
-                value={inputs.base_url}
-                autoComplete="new-password"
-              />
-            </>
-          )}
-          <div style={{ marginTop: 10 }}>
-            <Typography.Text strong>{t('分组')}：</Typography.Text>
-          </div>
-          <Select
-            placeholder={t('请选择可以使用该渠道的分组')}
-            name="groups"
-            required
-            multiple
-            selection
-            allowAdditions
-            additionLabel={t('请在系统设置页面编辑分组倍率以添加新的分组：')}
-            onChange={(value) => {
-              handleInputChange('groups', value);
-            }}
-            value={inputs.groups}
-            autoComplete="new-password"
-            optionList={groupOptions}
-          />
-          {inputs.type === 18 && (
-            <>
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>模型版本：</Typography.Text>
+
+              {!isEdit && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="batch" 
+                    checked={batch}
+                    onCheckedChange={() => setBatch(!batch)}
+                  />
+                  <Label htmlFor="batch" className="font-medium cursor-pointer">
+                    {t('批量创建')}
+                  </Label>
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="groups">{t('分组')}：</Label>
+                <Select 
+                  value={inputs.groups} 
+                  onValueChange={(value) => handleInputChange('groups', value)}
+                  multiple
+                >
+                  <SelectTrigger className="w-full mt-1">
+                    <SelectValue placeholder={t('请选择可以使用该渠道的分组')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groupOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Input
-                name="other"
-                placeholder={
-                  '请输入星火大模型版本，注意是接口地址中的版本号，例如：v2.1'
-                }
-                onChange={(value) => {
-                  handleInputChange('other', value);
-                }}
-                value={inputs.other}
-                autoComplete="new-password"
-              />
-            </>
-          )}
-          {inputs.type === 41 && (
-            <>
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>{t('部署地区')}：</Typography.Text>
+
+              <div>
+                <Label htmlFor="models">{t('模型')}：</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {inputs.models.map(model => (
+                    <div key={model} className="flex items-center bg-secondary text-secondary-foreground px-2 py-1 rounded text-sm">
+                      {model}
+                      <button 
+                        className="ml-1 text-secondary-foreground/70 hover:text-secondary-foreground"
+                        onClick={() => {
+                          const newModels = inputs.models.filter(m => m !== model);
+                          handleInputChange('models', newModels);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center space-x-2 mt-2">
+                  <Input
+                    placeholder={t('输入自定义模型名称')}
+                    value={customModel}
+                    onChange={(e) => setCustomModel(e.target.value.trim())}
+                    className="flex-1"
+                  />
+                  <Button onClick={addCustomModels} type="button">
+                    {t('填入')}
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => handleInputChange('models', basicModels)}
+                    size="sm"
+                  >
+                    {t('填入相关模型')}
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => handleInputChange('models', fullModels)}
+                    size="sm"
+                  >
+                    {t('填入所有模型')}
+                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => fetchUpstreamModelList('models')}
+                          size="sm"
+                        >
+                          {t('获取模型列表')}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t('新建渠道时，请求通过当前浏览器发出；编辑已有渠道，请求通过后端服务器发出')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => handleInputChange('models', [])}
+                    size="sm"
+                  >
+                    {t('清除所有模型')}
+                  </Button>
+                </div>
               </div>
-              <TextArea
-                name="other"
-                placeholder={t('请输入部署地区，例如：us-central1\n支持使用模型映射格式\n' +
-                  '{\n' +
-                  '    "default": "us-central1",\n' +
-                  '    "claude-3-5-sonnet-20240620": "europe-west1"\n' +
-                  '}')}
-                autosize={{ minRows: 2 }}
-                onChange={(value) => {
-                  handleInputChange('other', value);
-                }}
-                value={inputs.other}
-                autoComplete="new-password"
-              />
-              <Typography.Text
-                style={{
-                  color: 'rgba(var(--semi-blue-5), 1)',
-                  userSelect: 'none',
-                  cursor: 'pointer'
-                }}
-                onClick={() => {
-                  handleInputChange(
-                    'other',
-                    JSON.stringify(REGION_EXAMPLE, null, 2)
-                  );
-                }}
-              >
-                {t('填入模板')}
-              </Typography.Text>
-            </>
-          )}
-          {inputs.type === 21 && (
-            <>
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>知识库 ID：</Typography.Text>
-              </div>
-              <Input
-                label="知识库 ID"
-                name="other"
-                placeholder={'请输入知识库 ID，例如：123456'}
-                onChange={(value) => {
-                  handleInputChange('other', value);
-                }}
-                value={inputs.other}
-                autoComplete="new-password"
-              />
-            </>
-          )}
-          {inputs.type === 39 && (
-            <>
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>Account ID：</Typography.Text>
-              </div>
-              <Input
-                name="other"
-                placeholder={
-                  '请输入Account ID，例如：d6b5da8hk1awo8nap34ube6gh'
-                }
-                onChange={(value) => {
-                  handleInputChange('other', value);
-                }}
-                value={inputs.other}
-                autoComplete="new-password"
-              />
-            </>
-          )}
-          <div style={{ marginTop: 10 }}>
-            <Typography.Text strong>{t('模型')}：</Typography.Text>
-          </div>
-          <Select
-            placeholder={'请选择该渠道所支持的模型'}
-            name="models"
-            required
-            multiple
-            selection
-            filter
-            searchPosition='dropdown'
-            onChange={(value) => {
-              handleInputChange('models', value);
-            }}
-            value={inputs.models}
-            autoComplete="new-password"
-            optionList={modelOptions}
-          />
-          <div style={{ lineHeight: '40px', marginBottom: '12px' }}>
-            <Space>
-              <Button
-                type="primary"
-                onClick={() => {
-                  handleInputChange('models', basicModels);
-                }}
-              >
-                {t('填入相关模型')}
-              </Button>
-              <Button
-                type="secondary"
-                onClick={() => {
-                  handleInputChange('models', fullModels);
-                }}
-              >
-                {t('填入所有模型')}
-              </Button>
-              <Tooltip content={t('新建渠道时，请求通过当前浏览器发出；编辑已有渠道，请求通过后端服务器发出')}>
-                <Button
-                  type="tertiary"
+
+              <div>
+                <Label htmlFor="model_mapping">{t('模型重定向')}：</Label>
+                <Textarea
+                  id="model_mapping"
+                  className="mt-1 font-mono"
+                  placeholder={t('此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称，例如：') + `\n${JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)}`}
+                  onChange={(e) => handleInputChange('model_mapping', e.target.value)}
+                  value={inputs.model_mapping || ""}
+                  rows={6}
+                />
+                <Button 
+                  variant="link" 
+                  className="px-0 h-auto" 
                   onClick={() => {
-                    fetchUpstreamModelList('models');
+                    handleInputChange(
+                      'model_mapping',
+                      JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)
+                    );
                   }}
                 >
-                  {t('获取模型列表')}
+                  {t('填入模板')}
                 </Button>
-              </Tooltip>
-              <Button
-                type="warning"
-                onClick={() => {
-                  handleInputChange('models', []);
-                }}
-              >
-                {t('清除所有模型')}
-              </Button>
-            </Space>
-            <Input
-              addonAfter={
-                <Button type="primary" onClick={addCustomModels}>
-                  {t('填入')}
-                </Button>
-              }
-              placeholder={t('输入自定义模型名称')}
-              value={customModel}
-              onChange={(value) => {
-                setCustomModel(value.trim());
-              }}
-            />
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <Typography.Text strong>{t('模型重定向')}：</Typography.Text>
-          </div>
-          <TextArea
-            placeholder={t('此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称，例如：') + `\n${JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)}`}
-            name="model_mapping"
-            onChange={(value) => {
-              handleInputChange('model_mapping', value);
-            }}
-            autosize
-            value={inputs.model_mapping}
-            autoComplete="new-password"
-          />
-          <Typography.Text
-            style={{
-              color: 'rgba(var(--semi-blue-5), 1)',
-              userSelect: 'none',
-              cursor: 'pointer'
-            }}
-            onClick={() => {
-              handleInputChange(
-                'model_mapping',
-                JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)
-              );
-            }}
-          >
-            {t('填入模板')}
-          </Typography.Text>
-          <div style={{ marginTop: 10 }}>
-            <Typography.Text strong>
-              {t('渠道标签')}
-            </Typography.Text>
-          </div>
-          <Input
-            label={t('渠道标签')}
-            name="tag"
-            placeholder={t('渠道标签')}
-            onChange={(value) => {
-              handleInputChange('tag', value);
-            }}
-            value={inputs.tag}
-            autoComplete="new-password"
-          />
-          <div style={{ marginTop: 10 }}>
-            <Typography.Text strong>
-              {t('渠道优先级')}
-            </Typography.Text>
-          </div>
-          <Input
-            label={t('渠道优先级')}
-            name="priority"
-            placeholder={t('渠道优先级')}
-            onChange={(value) => {
-              const number = parseInt(value);
-              if (isNaN(number)) {
-                handleInputChange('priority', value);
-              } else {
-                handleInputChange('priority', number);
-              }
-            }}
-            value={inputs.priority}
-            autoComplete="new-password"
-          />
-          <div style={{ marginTop: 10 }}>
-            <Typography.Text strong>
-              {t('渠道权重')}
-            </Typography.Text>
-          </div>
-          <Input
-            label={t('渠道权重')}
-            name="weight"
-            placeholder={t('渠道权重')}
-            onChange={(value) => {
-              const number = parseInt(value);
-              if (isNaN(number)) {
-                handleInputChange('weight', value);
-              } else {
-                handleInputChange('weight', number);
-              }
-            }}
-            value={inputs.weight}
-            autoComplete="new-password"
-          />
-          <>
-            <div style={{ marginTop: 10 }}>
-              <Typography.Text strong>
-                {t('渠道额外设置')}：
-              </Typography.Text>
-            </div>
-            <TextArea
-              placeholder={t('此项可选，用于配置渠道特定设置，为一个 JSON 字符串，例如：') + '\n{\n  "force_format": true\n}'}
-              name="setting"
-              onChange={(value) => {
-                handleInputChange('setting', value);
-              }}
-              autosize
-              value={inputs.setting}
-              autoComplete="new-password"
-            />
-            <Space>
-              <Typography.Text
-                style={{
-                  color: 'rgba(var(--semi-blue-5), 1)',
-                  userSelect: 'none',
-                  cursor: 'pointer'
-                }}
-                onClick={() => {
-                  handleInputChange(
-                    'setting',
-                    JSON.stringify({
-                      force_format: true
-                    }, null, 2)
-                  );
-                }}
-              >
-                {t('填入模板')}
-              </Typography.Text>
-              <Typography.Text
-                style={{
-                  color: 'rgba(var(--semi-blue-5), 1)',
-                  userSelect: 'none',
-                  cursor: 'pointer'
-                }}
-                onClick={() => {
-                  window.open('https://github.com/Calcium-Ion/new-api/blob/main/docs/channel/other_setting.md');
-                }}
-              >
-                {t('设置说明')}
-              </Typography.Text>
-            </Space>
-          </>
-          {inputs.type === 1 && (
-            <>
-              <div style={{ marginTop: 10 }}>
-                <Typography.Text strong>{t('组织')}：</Typography.Text>
               </div>
-              <Input
-                label={t('组织，可选，不填则为默认组织')}
-                name="openai_organization"
-                placeholder={t('请输入组织org-xxx')}
-                onChange={(value) => {
-                  handleInputChange('openai_organization', value);
-                }}
-                value={inputs.openai_organization}
-              />
-            </>
-          )}
-          <div style={{ marginTop: 10 }}>
-            <Typography.Text strong>{t('默认测试模型')}：</Typography.Text>
+
+              <div>
+                <Label htmlFor="tag">{t('渠道标签')}：</Label>
+                <Input
+                  id="tag"
+                  className="mt-1"
+                  placeholder={t('渠道标签')}
+                  onChange={(e) => handleInputChange('tag', e.target.value)}
+                  value={inputs.tag}
+                  autoComplete="new-password"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="weight">{t('渠道权重')}：</Label>
+                <Input
+                  id="weight"
+                  className="mt-1"
+                  placeholder={t('渠道权重')}
+                  onChange={(e) => {
+                    const number = parseInt(e.target.value);
+                    if (isNaN(number)) {
+                      handleInputChange('weight', e.target.value);
+                    } else {
+                      handleInputChange('weight', number);
+                    }
+                  }}
+                  value={inputs.weight}
+                  autoComplete="new-password"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="auto_ban" 
+                  checked={autoBan}
+                  onCheckedChange={() => setAutoBan(!autoBan)}
+                />
+                <Label htmlFor="auto_ban" className="font-medium cursor-pointer">
+                  {t('是否自动禁用（仅当自动禁用开启时有效），关闭后不会自动禁用该渠道')}
+                </Label>
+              </div>
+            </div>
           </div>
-          <Input
-            name="test_model"
-            placeholder={t('不填则为模型列表第一个')}
-            onChange={(value) => {
-              handleInputChange('test_model', value);
-            }}
-            value={inputs.test_model}
-          />
-          <div style={{ marginTop: 10, display: 'flex' }}>
-            <Space>
-              <Checkbox
-                name="auto_ban"
-                checked={autoBan}
-                onChange={() => {
-                  setAutoBan(!autoBan);
-                }}
-              />
-              <Typography.Text strong>
-                {t('是否自动禁用（仅当自动禁用开启时有效），关闭后不会自动禁用该渠道：')}
-              </Typography.Text>
-            </Space>
+        </div>
+        
+        <SheetFooter className="pt-4 border-t">
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={handleCancel}>
+              {t('取消')}
+            </Button>
+            <Button onClick={submit} disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {t('提交')}
+            </Button>
           </div>
-          <div style={{ marginTop: 10 }}>
-            <Typography.Text strong>
-              {t('状态码复写（仅影响本地判断，不修改返回到上游的状态码）')}：
-            </Typography.Text>
-          </div>
-          <TextArea
-            placeholder={t('此项可选，用于复写返回的状态码，比如将claude渠道的400错误复写为500（用于重试），请勿滥用该功能，例如：') +
-              '\n' + JSON.stringify(STATUS_CODE_MAPPING_EXAMPLE, null, 2)}
-            name="status_code_mapping"
-            onChange={(value) => {
-              handleInputChange('status_code_mapping', value);
-            }}
-            autosize
-            value={inputs.status_code_mapping}
-            autoComplete="new-password"
-          />
-          <Typography.Text
-            style={{
-              color: 'rgba(var(--semi-blue-5), 1)',
-              userSelect: 'none',
-              cursor: 'pointer'
-            }}
-            onClick={() => {
-              handleInputChange(
-                'status_code_mapping',
-                JSON.stringify(STATUS_CODE_MAPPING_EXAMPLE, null, 2)
-              );
-            }}
-          >
-            {t('填入模板')}
-          </Typography.Text>
-        </Spin>
-      </SideSheet>
-    </>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 };
 

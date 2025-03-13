@@ -1,12 +1,17 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Row, Spin } from '@douyinfe/semi-ui';
 import {
-  compareObjects,
   API,
+  compareObjects,
   showError,
   showSuccess,
   showWarning,
 } from '../../../helpers';
+import React, { useEffect, useRef, useState } from 'react';
+
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import { Loader2 } from 'lucide-react';
+import { Switch } from '../../../components/ui/switch';
 import { useTranslation } from 'react-i18next';
 
 export default function RequestRateLimit(props) {
@@ -19,7 +24,7 @@ export default function RequestRateLimit(props) {
     ModelRequestRateLimitSuccessCount: 1000,
     ModelRequestRateLimitDurationMinutes: 1
   });
-  const refForm = useRef();
+  const formRef = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
 
   function onSubmit() {
@@ -65,95 +70,115 @@ export default function RequestRateLimit(props) {
     }
     setInputs(currentInputs);
     setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
   }, [props.options]);
 
   return (
-    <>
-      <Spin spinning={loading}>
-        <Form
-          values={inputs}
-          getFormApi={(formAPI) => (refForm.current = formAPI)}
-          style={{ marginBottom: 15 }}
-        >
-          <Form.Section text={t('模型请求速率限制')}>
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'ModelRequestRateLimitEnabled'}
-                  label={t('启用用户模型请求速率限制（可能会影响高并发性能）')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) => {
-                    setInputs({
-                      ...inputs,
-                      ModelRequestRateLimitEnabled: value,
-                    });
-                  }}
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.InputNumber
-                  label={t('限制周期')}
-                  step={1}
+    <div className="space-y-8">
+      {loading && (
+        <div className="flex justify-center items-center py-4">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      )}
+      
+      <div className="space-y-6">
+        <h3 className="text-lg font-medium">{t('模型请求速率限制')}</h3>
+        
+        <div className="grid gap-6">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="ModelRequestRateLimitEnabled"
+              checked={inputs.ModelRequestRateLimitEnabled}
+              onCheckedChange={(value) => {
+                setInputs({
+                  ...inputs,
+                  ModelRequestRateLimitEnabled: value,
+                });
+              }}
+            />
+            <Label htmlFor="ModelRequestRateLimitEnabled">
+              {t('启用用户模型请求速率限制（可能会影响高并发性能）')}
+            </Label>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="ModelRequestRateLimitDurationMinutes">{t('限制周期')}</Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="ModelRequestRateLimitDurationMinutes"
+                  type="number"
                   min={0}
-                  suffix={t('分钟')}
-                  extraText={t('频率限制的周期（分钟）')}
-                  field={'ModelRequestRateLimitDurationMinutes'}
-                  onChange={(value) =>
+                  value={inputs.ModelRequestRateLimitDurationMinutes}
+                  onChange={(e) =>
                     setInputs({
                       ...inputs,
-                      ModelRequestRateLimitDurationMinutes: String(value),
+                      ModelRequestRateLimitDurationMinutes: String(e.target.value),
                     })
                   }
+                  className="max-w-[150px]"
                 />
-              </Col>
-            </Row>
-            <Row>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.InputNumber
-                  label={t('用户每周期最多请求次数')}
-                  step={1}
+                <span>{t('分钟')}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">{t('频率限制的周期（分钟）')}</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="ModelRequestRateLimitCount">{t('用户每周期最多请求次数')}</Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="ModelRequestRateLimitCount"
+                  type="number"
                   min={0}
-                  suffix={t('次')}
-                  extraText={t('包括失败请求的次数，0代表不限制')}
-                  field={'ModelRequestRateLimitCount'}
-                  onChange={(value) =>
+                  value={inputs.ModelRequestRateLimitCount}
+                  onChange={(e) =>
                     setInputs({
                       ...inputs,
-                      ModelRequestRateLimitCount: String(value),
+                      ModelRequestRateLimitCount: String(e.target.value),
                     })
                   }
+                  className="max-w-[150px]"
                 />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.InputNumber
-                  label={t('用户每周期最多请求完成次数')}
-                  step={1}
+                <span>{t('次')}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">{t('包括失败请求的次数，0代表不限制')}</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="ModelRequestRateLimitSuccessCount">{t('用户每周期最多请求完成次数')}</Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="ModelRequestRateLimitSuccessCount"
+                  type="number"
                   min={1}
-                  suffix={t('次')}
-                  extraText={t('只包括请求成功的次数')}
-                  field={'ModelRequestRateLimitSuccessCount'}
-                  onChange={(value) =>
+                  value={inputs.ModelRequestRateLimitSuccessCount}
+                  onChange={(e) =>
                     setInputs({
                       ...inputs,
-                      ModelRequestRateLimitSuccessCount: String(value),
+                      ModelRequestRateLimitSuccessCount: String(e.target.value),
                     })
                   }
+                  className="max-w-[150px]"
                 />
-              </Col>
-            </Row>
-            <Row>
-              <Button size='default' onClick={onSubmit}>
-                {t('保存模型速率限制')}
-              </Button>
-            </Row>
-          </Form.Section>
-        </Form>
-      </Spin>
-    </>
+                <span>{t('次')}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">{t('只包括请求成功的次数')}</p>
+            </div>
+          </div>
+          
+          <div>
+            <Button onClick={onSubmit} disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('保存中...')}
+                </>
+              ) : (
+                t('保存模型速率限制')
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

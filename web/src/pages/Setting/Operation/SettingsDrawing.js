@@ -1,12 +1,17 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Row, Spin, Tag } from '@douyinfe/semi-ui';
 import {
-  compareObjects,
   API,
+  compareObjects,
   showError,
   showSuccess,
   showWarning,
 } from '../../../helpers';
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import React, { useEffect, useRef, useState } from 'react';
+
+import { Button } from "../../../components/ui/button";
+import { Label } from "../../../components/ui/label";
+import { Loader2 } from "lucide-react";
+import { Switch } from "../../../components/ui/switch";
 import { useTranslation } from 'react-i18next';
 
 export default function SettingsDrawing(props) {
@@ -20,7 +25,6 @@ export default function SettingsDrawing(props) {
     MjModeClearEnabled: false,
     MjActionCheckSuccessEnabled: false,
   });
-  const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
 
   function onSubmit() {
@@ -66,124 +70,114 @@ export default function SettingsDrawing(props) {
     }
     setInputs(currentInputs);
     setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
-    localStorage.setItem('mj_notify_enabled', String(inputs.MjNotifyEnabled));
   }, [props.options]);
-
+  
   return (
     <>
-      <Spin spinning={loading}>
-        <Form
-          values={inputs}
-          getFormApi={(formAPI) => (refForm.current = formAPI)}
-          style={{ marginBottom: 15 }}
-        >
-          <Form.Section text={t('绘图设置')}>
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'DrawingEnabled'}
-                  label={t('启用绘图功能')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) => {
-                    setInputs({
-                      ...inputs,
-                      DrawingEnabled: value,
-                    });
-                  }}
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'MjNotifyEnabled'}
-                  label={t('允许回调（会泄露服务器 IP 地址）')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      MjNotifyEnabled: value,
-                    })
-                  }
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'MjAccountFilterEnabled'}
-                  label={t('允许 AccountFilter 参数')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      MjAccountFilterEnabled: value,
-                    })
-                  }
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'MjForwardUrlEnabled'}
-                  label={t('开启之后将上游地址替换为服务器地址')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      MjForwardUrlEnabled: value,
-                    })
-                  }
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'MjModeClearEnabled'}
-                  label={
-                    <>
-                      {t('开启之后会清除用户提示词中的')} <Tag>--fast</Tag> 、
-                      <Tag>--relax</Tag> {t('以及')} <Tag>--turbo</Tag> {t('参数')}
-                    </>
-                  }
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      MjModeClearEnabled: value,
-                    })
-                  }
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'MjActionCheckSuccessEnabled'}
-                  label={t('检测必须等待绘图成功才能进行放大等操作')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      MjActionCheckSuccessEnabled: value,
-                    })
-                  }
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Button size='default' onClick={onSubmit}>
+      {loading ? (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('绘图设置')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="DrawingEnabled"
+                    checked={inputs.DrawingEnabled}
+                    onCheckedChange={(checked) => {
+                      setInputs({
+                        ...inputs,
+                        DrawingEnabled: checked,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="DrawingEnabled">{t('启用绘图功能')}</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="MjNotifyEnabled"
+                    checked={inputs.MjNotifyEnabled}
+                    onCheckedChange={(checked) => {
+                      setInputs({
+                        ...inputs,
+                        MjNotifyEnabled: checked,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="MjNotifyEnabled">{t('启用 MidJourney 通知')}</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="MjAccountFilterEnabled"
+                    checked={inputs.MjAccountFilterEnabled}
+                    onCheckedChange={(checked) => {
+                      setInputs({
+                        ...inputs,
+                        MjAccountFilterEnabled: checked,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="MjAccountFilterEnabled">{t('启用 MidJourney 账号过滤')}</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="MjForwardUrlEnabled"
+                    checked={inputs.MjForwardUrlEnabled}
+                    onCheckedChange={(checked) => {
+                      setInputs({
+                        ...inputs,
+                        MjForwardUrlEnabled: checked,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="MjForwardUrlEnabled">{t('启用 MidJourney 转发')}</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="MjModeClearEnabled"
+                    checked={inputs.MjModeClearEnabled}
+                    onCheckedChange={(checked) => {
+                      setInputs({
+                        ...inputs,
+                        MjModeClearEnabled: checked,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="MjModeClearEnabled">{t('启用 MidJourney 模式清除')}</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="MjActionCheckSuccessEnabled"
+                    checked={inputs.MjActionCheckSuccessEnabled}
+                    onCheckedChange={(checked) => {
+                      setInputs({
+                        ...inputs,
+                        MjActionCheckSuccessEnabled: checked,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="MjActionCheckSuccessEnabled">{t('启用 MidJourney 动作成功检查')}</Label>
+                </div>
+              </div>
+              
+              <Button onClick={onSubmit} className="mt-4">
                 {t('保存绘图设置')}
               </Button>
-            </Row>
-          </Form.Section>
-        </Form>
-      </Spin>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

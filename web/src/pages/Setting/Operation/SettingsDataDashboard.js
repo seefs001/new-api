@@ -1,29 +1,35 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Row, Spin } from '@douyinfe/semi-ui';
 import {
-  compareObjects,
   API,
+  compareObjects,
   showError,
   showSuccess,
   showWarning,
 } from '../../../helpers';
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../components/ui/select";
+
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
+import { Loader2 } from "lucide-react";
+import { Switch } from "../../../components/ui/switch";
 import { useTranslation } from 'react-i18next';
 
-export default function DataDashboard(props) {
+export default function SettingsDataDashboard(props) {
   const { t } = useTranslation();
-  
-  const optionsDataExportDefaultTime = [
-    { key: 'hour', label: t('小时'), value: 'hour' },
-    { key: 'day', label: t('天'), value: 'day' },
-    { key: 'week', label: t('周'), value: 'week' },
-  ];
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
     DataExportEnabled: false,
-    DataExportInterval: '',
-    DataExportDefaultTime: '',
+    DataExportInterval: 5,
+    DataExportDefaultTime: 'hour',
   });
-  const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
 
   function onSubmit() {
@@ -69,82 +75,84 @@ export default function DataDashboard(props) {
     }
     setInputs(currentInputs);
     setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
-    localStorage.setItem(
-      'data_export_default_time',
-      String(inputs.DataExportDefaultTime),
-    );
   }, [props.options]);
-
+  
   return (
     <>
-      <Spin spinning={loading}>
-        <Form
-          values={inputs}
-          getFormApi={(formAPI) => (refForm.current = formAPI)}
-          style={{ marginBottom: 15 }}
-        >
-          <Form.Section text={t('数据看板设置')}>
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'DataExportEnabled'}
-                  label={t('启用数据看板（实验性）')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) => {
+      {loading ? (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('数据看板设置')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="DataExportEnabled"
+                  checked={inputs.DataExportEnabled}
+                  onCheckedChange={(checked) => {
                     setInputs({
                       ...inputs,
-                      DataExportEnabled: value,
+                      DataExportEnabled: checked,
                     });
                   }}
                 />
-              </Col>
-            </Row>
-            <Row>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.InputNumber
-                  label={t('数据看板更新间隔')}
-                  step={1}
-                  min={1}
-                  suffix={t('分钟')}
-                  extraText={t('设置过短会影响数据库性能')}
-                  placeholder={t('数据看板更新间隔')}
-                  field={'DataExportInterval'}
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      DataExportInterval: String(value),
-                    })
-                  }
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Select
-                  label={t('数据看板默认时间粒度')}
-                  optionList={optionsDataExportDefaultTime}
-                  field={'DataExportDefaultTime'}
-                  extraText={t('仅修改展示粒度，统计精确到小时')}
-                  placeholder={t('数据看板默认时间粒度')}
-                  style={{ width: 180 }}
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      DataExportDefaultTime: String(value),
-                    })
-                  }
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Button size='default' onClick={onSubmit}>
+                <Label htmlFor="DataExportEnabled">{t('启用数据导出功能')}</Label>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="DataExportInterval">{t('导出时间间隔')}</Label>
+                  <Input
+                    id="DataExportInterval"
+                    type="number"
+                    min={1}
+                    value={inputs.DataExportInterval}
+                    onChange={(e) => 
+                      setInputs({
+                        ...inputs,
+                        DataExportInterval: e.target.value,
+                      })
+                    }
+                    className="max-w-xs"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="DataExportDefaultTime">{t('默认时间单位')}</Label>
+                  <Select
+                    value={inputs.DataExportDefaultTime}
+                    onValueChange={(value) => 
+                      setInputs({
+                        ...inputs,
+                        DataExportDefaultTime: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="max-w-xs">
+                      <SelectValue placeholder={t('选择时间单位')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hour">{t('小时')}</SelectItem>
+                      <SelectItem value="day">{t('天')}</SelectItem>
+                      <SelectItem value="week">{t('周')}</SelectItem>
+                      <SelectItem value="month">{t('月')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <Button onClick={onSubmit} className="mt-4">
                 {t('保存数据看板设置')}
               </Button>
-            </Row>
-          </Form.Section>
-        </Form>
-      </Spin>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

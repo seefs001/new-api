@@ -1,25 +1,30 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Row, Spin } from '@douyinfe/semi-ui';
 import {
-  compareObjects,
   API,
+  compareObjects,
   showError,
   showSuccess,
-  showWarning, verifyJSON
+  showWarning,
 } from '../../../helpers';
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import React, { useEffect, useRef, useState } from 'react';
+
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
+import { Loader2 } from "lucide-react";
+import { Switch } from "../../../components/ui/switch";
+import { Textarea } from "../../../components/ui/textarea";
 import { useTranslation } from 'react-i18next';
 
 export default function SettingsMonitoring(props) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
-    ChannelDisableThreshold: '',
-    QuotaRemindThreshold: '',
     AutomaticDisableChannelEnabled: false,
     AutomaticEnableChannelEnabled: false,
+    ChannelDisableThreshold: '',
     AutomaticDisableKeywords: '',
   });
-  const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
 
   function onSubmit() {
@@ -65,106 +70,98 @@ export default function SettingsMonitoring(props) {
     }
     setInputs(currentInputs);
     setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
   }, [props.options]);
   
   return (
     <>
-      <Spin spinning={loading}>
-        <Form
-          values={inputs}
-          getFormApi={(formAPI) => (refForm.current = formAPI)}
-          style={{ marginBottom: 15 }}
-        >
-          <Form.Section text={t('监控设置')}>
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.InputNumber
-                  label={t('测试所有渠道的最长响应时间')}
-                  step={1}
+      {loading ? (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('监控设置')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="ChannelDisableThreshold">{t('通道禁用阈值')}</Label>
+                <Input
+                  id="ChannelDisableThreshold"
+                  type="number"
                   min={0}
-                  suffix={t('秒')}
-                  extraText={t('当运行通道全部测试时，超过此时间将自动禁用通道')}
-                  placeholder={''}
-                  field={'ChannelDisableThreshold'}
-                  onChange={(value) =>
+                  step={0.01}
+                  value={inputs.ChannelDisableThreshold}
+                  onChange={(e) => 
                     setInputs({
                       ...inputs,
-                      ChannelDisableThreshold: String(value),
+                      ChannelDisableThreshold: e.target.value,
                     })
                   }
+                  placeholder={t('例如：0.30，表示当通道连续失败率超过 30% 时自动禁用')}
+                  className="max-w-md"
                 />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.InputNumber
-                  label={t('额度提醒阈值')}
-                  step={1}
-                  min={0}
-                  suffix={'Token'}
-                  extraText={t('低于此额度时将发送邮件提醒用户')}
-                  placeholder={''}
-                  field={'QuotaRemindThreshold'}
-                  onChange={(value) =>
+                <p className="text-xs text-muted-foreground">{t('例如：0.30，表示当通道连续失败率超过 30% 时自动禁用')}</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="AutomaticDisableChannelEnabled"
+                    checked={inputs.AutomaticDisableChannelEnabled}
+                    onCheckedChange={(checked) => {
+                      setInputs({
+                        ...inputs,
+                        AutomaticDisableChannelEnabled: checked,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="AutomaticDisableChannelEnabled">{t('失败时自动禁用通道')}</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="AutomaticEnableChannelEnabled"
+                    checked={inputs.AutomaticEnableChannelEnabled}
+                    onCheckedChange={(checked) => {
+                      setInputs({
+                        ...inputs,
+                        AutomaticEnableChannelEnabled: checked,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="AutomaticEnableChannelEnabled">{t('成功时自动启用通道')}</Label>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="AutomaticDisableKeywords">{t('自动禁用关键词')}</Label>
+                <Textarea
+                  id="AutomaticDisableKeywords"
+                  value={inputs.AutomaticDisableKeywords}
+                  onChange={(e) => 
                     setInputs({
                       ...inputs,
-                      QuotaRemindThreshold: String(value),
+                      AutomaticDisableKeywords: e.target.value,
                     })
                   }
-                />
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'AutomaticDisableChannelEnabled'}
-                  label={t('失败时自动禁用通道')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) => {
-                    setInputs({
-                      ...inputs,
-                      AutomaticDisableChannelEnabled: value,
-                    });
-                  }}
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'AutomaticEnableChannelEnabled'}
-                  label={t('成功时自动启用通道')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      AutomaticEnableChannelEnabled: value,
-                    })
-                  }
-                />
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col xs={24} sm={16}>
-                <Form.TextArea
-                  label={t('自动禁用关键词')}
                   placeholder={t('一行一个，不区分大小写')}
-                  extraText={t('当上游通道返回错误中包含这些关键词时（不区分大小写），自动禁用通道')}
-                  field={'AutomaticDisableKeywords'}
-                  autosize={{ minRows: 6, maxRows: 12 }}
-                  onChange={(value) => setInputs({ ...inputs, AutomaticDisableKeywords: value })}
+                  rows={6}
+                  className="font-mono resize-y max-w-2xl"
                 />
-              </Col>
-            </Row>
-            <Row>
-              <Button size='default' onClick={onSubmit}>
+                <p className="text-xs text-muted-foreground">
+                  {t('当上游通道返回错误中包含这些关键词时（不区分大小写），自动禁用通道')}
+                </p>
+              </div>
+              
+              <Button onClick={onSubmit} className="mt-4">
                 {t('保存监控设置')}
               </Button>
-            </Row>
-          </Form.Section>
-        </Form>
-      </Spin>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

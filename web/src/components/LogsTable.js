@@ -1,5 +1,3 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   API,
   copy,
@@ -9,35 +7,39 @@ import {
   showSuccess,
   timestamp2string,
 } from '../helpers';
-
+import { Copy, RefreshCw, Settings } from 'lucide-react';
 import {
-  Avatar,
-  Button, Descriptions,
-  Form,
-  Layout,
-  Modal, Popover,
-  Select,
-  Space,
-  Spin,
-  Table,
-  Tag,
-  Tooltip,
-  Checkbox
-} from '@douyinfe/semi-ui';
-import { ITEMS_PER_PAGE } from '../constants';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import React, { useContext, useEffect, useState } from 'react';
 import {
-  renderAudioModelPrice, renderGroup,
-  renderModelPrice, renderModelPriceSimple,
+  renderAudioModelPrice,
+  renderGroup,
+  renderModelPrice,
+  renderModelPriceSimple,
   renderNumber,
   renderQuota,
   stringToColor
 } from '../helpers/render';
-import Paragraph from '@douyinfe/semi-ui/lib/es/typography/paragraph';
-import { getLogOther } from '../helpers/other.js';
-import { StyleContext } from '../context/Style/index.js';
-import { IconInherit, IconRefresh, IconSetting } from '@douyinfe/semi-icons';
 
-const { Header } = Layout;
+// Import individual UI components
+import { Avatar } from './ui/avatar';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
+import { Form } from './ui/form';
+import { ITEMS_PER_PAGE } from '../constants';
+import { Select } from './ui/select';
+import { Separator } from './ui/separator';
+import { StyleContext } from '../context/Style/index.js';
+import { Table } from './ui/table';
+import { getLogOther } from '../helpers/other.js';
+import { useTranslation } from 'react-i18next';
 
 function renderTimestamp(timestamp) {
   return <>{timestamp2string(timestamp)}</>;

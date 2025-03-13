@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import {
   API,
   copy,
@@ -6,19 +5,56 @@ import {
   showSuccess,
   timestamp2string,
 } from '../helpers';
-
-import { ITEMS_PER_PAGE } from '../constants';
-import { renderQuota } from '../helpers/render';
 import {
-  Button, Divider,
-  Form,
-  Modal,
-  Popconfirm,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from './ui/alert-dialog';
+import {
+  AlertTriangle,
+  Check,
+  Copy,
+  Edit,
+  Eye,
+  Trash2,
+  X
+} from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from './ui/dialog';
+import {
   Popover,
+  PopoverContent,
+  PopoverTrigger
+} from './ui/popover';
+import React, { useEffect, useState } from 'react';
+import {
   Table,
-  Tag,
-} from '@douyinfe/semi-ui';
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from './ui/table';
+
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 import EditRedemption from '../pages/Redemption/EditRedemption';
+import { ITEMS_PER_PAGE } from '../constants';
+import { Separator } from './ui/separator';
+import { renderQuota } from '../helpers/render';
 import { useTranslation } from 'react-i18next';
 
 function renderTimestamp(timestamp) {
@@ -32,144 +68,30 @@ const RedemptionsTable = () => {
     switch (status) {
       case 1:
         return (
-          <Tag color='green' size='large'>
+          <Badge variant="outline" className="text-green-500 border-green-500">
             {t('未使用')}
-          </Tag>
+          </Badge>
         );
       case 2:
         return (
-          <Tag color='red' size='large'>
+          <Badge variant="outline" className="text-red-500 border-red-500">
             {t('已禁用')}
-          </Tag>
+          </Badge>
         );
       case 3:
         return (
-          <Tag color='grey' size='large'>
+          <Badge variant="outline" className="text-gray-500 border-gray-500">
             {t('已使用')}
-          </Tag>
+          </Badge>
         );
       default:
         return (
-          <Tag color='black' size='large'>
+          <Badge variant="outline" className="text-black border-black">
             {t('未知状态')}
-          </Tag>
+          </Badge>
         );
     }
   };
-
-  const columns = [
-    {
-      title: t('ID'),
-      dataIndex: 'id',
-    },
-    {
-      title: t('名称'),
-      dataIndex: 'name',
-    },
-    {
-      title: t('状态'),
-      dataIndex: 'status',
-      key: 'status',
-      render: (text, record, index) => {
-        return <div>{renderStatus(text)}</div>;
-      },
-    },
-    {
-      title: t('额度'),
-      dataIndex: 'quota',
-      render: (text, record, index) => {
-        return <div>{renderQuota(parseInt(text))}</div>;
-      },
-    },
-    {
-      title: t('创建时间'),
-      dataIndex: 'created_time',
-      render: (text, record, index) => {
-        return <div>{renderTimestamp(text)}</div>;
-      },
-    },
-    {
-      title: t('兑换人ID'),
-      dataIndex: 'used_user_id',
-      render: (text, record, index) => {
-        return <div>{text === 0 ? t('无') : text}</div>;
-      },
-    },
-    {
-      title: '',
-      dataIndex: 'operate',
-      render: (text, record, index) => (
-        <div>
-          <Popover content={record.key} style={{ padding: 20 }} position='top'>
-            <Button theme='light' type='tertiary' style={{ marginRight: 1 }}>
-              {t('查看')}
-            </Button>
-          </Popover>
-          <Button
-            theme='light'
-            type='secondary'
-            style={{ marginRight: 1 }}
-            onClick={async (text) => {
-              await copyText(record.key);
-            }}
-          >
-            {t('复制')}
-          </Button>
-          <Popconfirm
-            title={t('确定是否要删除此兑换码？')}
-            content={t('此修改将不可逆')}
-            okType={'danger'}
-            position={'left'}
-            onConfirm={() => {
-              manageRedemption(record.id, 'delete', record).then(() => {
-                removeRecord(record.key);
-              });
-            }}
-          >
-            <Button theme='light' type='danger' style={{ marginRight: 1 }}>
-              {t('删除')}
-            </Button>
-          </Popconfirm>
-          {record.status === 1 ? (
-            <Button
-              theme='light'
-              type='warning'
-              style={{ marginRight: 1 }}
-              onClick={async () => {
-                manageRedemption(record.id, 'disable', record);
-              }}
-            >
-              {t('禁用')}
-            </Button>
-          ) : (
-            <Button
-              theme='light'
-              type='secondary'
-              style={{ marginRight: 1 }}
-              onClick={async () => {
-                manageRedemption(record.id, 'enable', record);
-              }}
-              disabled={record.status === 3}
-            >
-              {t('启用')}
-            </Button>
-          )}
-          <Button
-            theme='light'
-            type='tertiary'
-            style={{ marginRight: 1 }}
-            onClick={() => {
-              setEditingRedemption(record);
-              setShowEdit(true);
-            }}
-            disabled={record.status !== 1}
-          >
-            {t('编辑')}
-          </Button>
-        </div>
-      ),
-    },
-  ];
 
   const [redemptions, setRedemptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -183,6 +105,8 @@ const RedemptionsTable = () => {
     id: undefined,
   });
   const [showEdit, setShowEdit] = useState(false);
+  const [keyToView, setKeyToView] = useState(null);
+  const [showKeyDialog, setShowKeyDialog] = useState(false);
 
   const closeEdit = () => {
     setShowEdit(false);
@@ -222,17 +146,68 @@ const RedemptionsTable = () => {
     if (await copy(text)) {
       showSuccess(t('已复制到剪贴板！'));
     } else {
-      // setSearchKeyword(text);
-      Modal.error({ title: t('无法复制到剪贴板，请手动复制'), content: text });
+      setKeyToView(text);
+      setShowKeyDialog(true);
     }
   };
 
-  const onPaginationChange = (e, { activePage }) => {
-    (async () => {
-      if (activePage === Math.ceil(redemptions.length / pageSize) + 1) {
-        await loadRedemptions(activePage - 1, pageSize);
+  const manageRedemption = async (id, action, record) => {
+    let url;
+    let method;
+    let body = {};
+    
+    switch (action) {
+      case 'delete':
+        url = `/api/redemption/${id}`;
+        method = 'DELETE';
+        break;
+      case 'disable':
+        url = `/api/redemption/${id}/status`;
+        method = 'PUT';
+        body = { status: 2 };
+        break;
+      case 'enable':
+        url = `/api/redemption/${id}/status`;
+        method = 'PUT';
+        body = { status: 1 };
+        break;
+      default:
+        showError(t('未知操作'));
+        return;
+    }
+    
+    try {
+      const res = await API.request({
+        url,
+        method,
+        data: body
+      });
+      
+      const { success, message, data } = res.data;
+      if (success) {
+        showSuccess(t('操作成功！'));
+        if (action === 'delete') {
+          // Item will be removed through callback in the component
+        } else {
+          // Update the status in the current list
+          setRedemptions(redemptions.map(item => 
+            item.id === id ? { ...item, status: action === 'enable' ? 1 : 2 } : item
+          ));
+        }
+      } else {
+        showError(message);
       }
-      setActivePage(activePage);
+    } catch (error) {
+      showError(t('操作失败：') + error.message);
+    }
+  };
+
+  const onPaginationChange = (page) => {
+    (async () => {
+      if (page === Math.ceil(redemptions.length / pageSize) + 1) {
+        await loadRedemptions(page - 1, pageSize);
+      }
+      setActivePage(page);
     })();
   };
 
@@ -248,193 +223,177 @@ const RedemptionsTable = () => {
     await loadRedemptions(activePage - 1, pageSize);
   };
 
-  const manageRedemption = async (id, action, record) => {
-    let data = { id };
-    let res;
-    switch (action) {
-      case 'delete':
-        res = await API.delete(`/api/redemption/${id}/`);
-        break;
-      case 'enable':
-        data.status = 1;
-        res = await API.put('/api/redemption/?status_only=true', data);
-        break;
-      case 'disable':
-        data.status = 2;
-        res = await API.put('/api/redemption/?status_only=true', data);
-        break;
-    }
-    const { success, message } = res.data;
-    if (success) {
-      showSuccess(t('操作成功完成！'));
-      let redemption = res.data.data;
-      let newRedemptions = [...redemptions];
-      // let realIdx = (activePage - 1) * ITEMS_PER_PAGE + idx;
-      if (action === 'delete') {
-      } else {
-        record.status = redemption.status;
-      }
-      setRedemptions(newRedemptions);
-    } else {
-      showError(message);
-    }
-  };
-
-  const searchRedemptions = async (keyword, page, pageSize) => {
-    if (searchKeyword === '') {
-        await loadRedemptions(page, pageSize);
-        return;
-    }
-    setSearching(true);
-    const res = await API.get(`/api/redemption/search?keyword=${keyword}&p=${page}&page_size=${pageSize}`);
-    const { success, message, data } = res.data;
-    if (success) {
-        const newPageData = data.items;
-        setActivePage(data.page);
-        setTokenCount(data.total);
-        setRedemptionFormat(newPageData);
-    } else {
-        showError(message);
-    }
-    setSearching(false);
-  };
-
-  const handleKeywordChange = async (value) => {
-    setSearchKeyword(value.trim());
-  };
-
-  const sortRedemption = (key) => {
-    if (redemptions.length === 0) return;
-    setLoading(true);
-    let sortedRedemptions = [...redemptions];
-    sortedRedemptions.sort((a, b) => {
-      return ('' + a[key]).localeCompare(b[key]);
-    });
-    if (sortedRedemptions[0].id === redemptions[0].id) {
-      sortedRedemptions.reverse();
-    }
-    setRedemptions(sortedRedemptions);
-    setLoading(false);
-  };
-
-  const handlePageChange = (page) => {
-    setActivePage(page);
-    if (searchKeyword === '') {
-      loadRedemptions(page, pageSize).then();
-    } else {
-      searchRedemptions(searchKeyword, page, pageSize).then();
-    }
-  };
-
-  let pageData = redemptions;
-  const rowSelection = {
-    onSelect: (record, selected) => {},
-    onSelectAll: (selected, selectedRows) => {},
-    onChange: (selectedRowKeys, selectedRows) => {
-      setSelectedKeys(selectedRows);
-    },
-  };
-
-  const handleRow = (record, index) => {
-    if (record.status !== 1) {
-      return {
-        style: {
-          background: 'var(--semi-color-disabled-border)',
-        },
-      };
-    } else {
-      return {};
-    }
-  };
-
   return (
-    <>
-      <EditRedemption
-        refresh={refresh}
-        editingRedemption={editingRedemption}
-        visiable={showEdit}
-        handleClose={closeEdit}
-      ></EditRedemption>
-      <Form onSubmit={()=> {
-        searchRedemptions(searchKeyword, activePage, pageSize).then();
-      }}>
-        <Form.Input
-          label={t('搜索关键字')}
-          field='keyword'
-          icon='search'
-          iconPosition='left'
-          placeholder={t('关键字(id或者名称)')}
-          value={searchKeyword}
-          loading={searching}
-          onChange={handleKeywordChange}
-        />
-      </Form>
-      <Divider style={{margin:'5px 0 15px 0'}}/>
-      <div>
-        <Button
-            theme='light'
-            type='primary'
-            style={{ marginRight: 8 }}
-            onClick={() => {
-              setEditingRedemption({
-                id: undefined,
-              });
-              setShowEdit(true);
-            }}
-        >
-          {t('添加兑换码')}
-        </Button>
-        <Button
-            label={t('复制所选兑换码')}
-            type='warning'
-            onClick={async () => {
-              if (selectedKeys.length === 0) {
-                showError(t('请至少选择一个兑换码！'));
-                return;
-              }
-              let keys = '';
-              for (let i = 0; i < selectedKeys.length; i++) {
-                keys += selectedKeys[i].name + '    ' + selectedKeys[i].key + '\n';
-              }
-              await copyText(keys);
-            }}
-        >
-          {t('复制所选兑换码到剪贴板')}
-        </Button>
+    <div className="space-y-4">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t('ID')}</TableHead>
+            <TableHead>{t('名称')}</TableHead>
+            <TableHead>{t('状态')}</TableHead>
+            <TableHead>{t('额度')}</TableHead>
+            <TableHead>{t('创建时间')}</TableHead>
+            <TableHead>{t('兑换人ID')}</TableHead>
+            <TableHead>{t('操作')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {redemptions.map((record) => (
+            <TableRow key={record.id}>
+              <TableCell>{record.id}</TableCell>
+              <TableCell>{record.name}</TableCell>
+              <TableCell>{renderStatus(record.status)}</TableCell>
+              <TableCell>{renderQuota(parseInt(record.quota))}</TableCell>
+              <TableCell>{renderTimestamp(record.created_time)}</TableCell>
+              <TableCell>{record.used_user_id === 0 ? t('无') : record.used_user_id}</TableCell>
+              <TableCell>
+                <div className="flex space-x-1">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4 mr-1" /> {t('查看')}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-4 w-auto">
+                      <pre className="text-xs bg-muted p-2 rounded">{record.key}</pre>
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => copyText(record.key)}
+                  >
+                    <Copy className="h-4 w-4 mr-1" /> {t('复制')}
+                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="h-4 w-4 mr-1" /> {t('删除')}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t('确定是否要删除此兑换码？')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t('此修改将不可逆')}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('取消')}</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => {
+                            manageRedemption(record.id, 'delete', record).then(() => {
+                              removeRecord(record.key);
+                            });
+                          }}
+                        >
+                          {t('确认删除')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  
+                  {record.status === 1 ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-yellow-500 border-yellow-500"
+                      onClick={() => manageRedemption(record.id, 'disable', record)}
+                    >
+                      <X className="h-4 w-4 mr-1" /> {t('禁用')}
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-green-500 border-green-500"
+                      onClick={() => manageRedemption(record.id, 'enable', record)}
+                      disabled={record.status === 3}
+                    >
+                      <Check className="h-4 w-4 mr-1" /> {t('启用')}
+                    </Button>
+                  )}
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setEditingRedemption(record);
+                      setShowEdit(true);
+                    }}
+                    disabled={record.status !== 1}
+                  >
+                    <Edit className="h-4 w-4 mr-1" /> {t('编辑')}
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      
+      <div className="flex justify-between items-center">
+        <div className="text-sm text-muted-foreground">
+          {t('共 {{total}} 条记录', { total: tokenCount })}
+        </div>
+        <div className="flex space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPaginationChange(Math.max(1, activePage - 1))}
+            disabled={activePage === 1}
+          >
+            {t('上一页')}
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => onPaginationChange(activePage + 1)}
+            disabled={activePage >= Math.ceil(tokenCount / pageSize)}
+          >
+            {t('下一页')}
+          </Button>
+        </div>
       </div>
-
-      <Table
-        style={{ marginTop: 20 }}
-        columns={columns}
-        dataSource={pageData}
-        pagination={{
-          currentPage: activePage,
-          pageSize: pageSize,
-          total: tokenCount,
-          showSizeChanger: true,
-          pageSizeOpts: [10, 20, 50, 100],
-          formatPageText: (page) =>
-            t('第 {{start}} - {{end}} 条，共 {{total}} 条', {
-              start: page.currentStart,
-              end: page.currentEnd,
-              total: tokenCount
-            }),
-          onPageSizeChange: (size) => {
-            setPageSize(size);
-            setActivePage(1);
-            if (searchKeyword === '') {
-              loadRedemptions(1, size).then();
-            } else {
-              searchRedemptions(searchKeyword, 1, size).then();
-            }
-          },
-          onPageChange: handlePageChange,
-        }}
-        loading={loading}
-        rowSelection={rowSelection}
-        onRow={handleRow}
-      ></Table>
-    </>
+      
+      {/* View Key Dialog */}
+      <Dialog open={showKeyDialog} onOpenChange={setShowKeyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('无法复制到剪贴板，请手动复制')}</DialogTitle>
+          </DialogHeader>
+          <div className="bg-muted p-4 rounded-md">
+            <code className="text-sm break-all">{keyToView}</code>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowKeyDialog(false)}>
+              {t('关闭')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Redemption Dialog */}
+      {showEdit && (
+        <Dialog open={showEdit} onOpenChange={setShowEdit}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{t('编辑兑换码')}</DialogTitle>
+            </DialogHeader>
+            <EditRedemption 
+              redemption={editingRedemption} 
+              onCancel={closeEdit} 
+              onSuccess={() => {
+                closeEdit();
+                refresh();
+              }} 
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
   );
 };
 

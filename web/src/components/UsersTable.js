@@ -1,47 +1,105 @@
-import React, { useEffect, useState } from 'react';
 import { API, showError, showSuccess } from '../helpers';
 import {
-  Button,
-  Form,
-  Popconfirm,
-  Space,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from './ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from './ui/dialog';
+import { Edit, PlusCircle, RefreshCw, Search, Trash } from 'lucide-react';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from './ui/pagination';
+import React, { useEffect, useState } from 'react';
+import {
   Table,
-  Tag,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table';
+import {
   Tooltip,
-} from '@douyinfe/semi-ui';
-import { ITEMS_PER_PAGE } from '../constants';
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from './ui/tooltip';
 import { renderGroup, renderNumber, renderQuota } from '../helpers/render';
+
 import AddUser from '../pages/User/AddUser';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 import EditUser from '../pages/User/EditUser';
+import { ITEMS_PER_PAGE } from '../constants';
+import { Input } from './ui/input';
 import { useTranslation } from 'react-i18next';
 
 const UsersTable = () => {
   const { t } = useTranslation();
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activePage, setActivePage] = useState(1);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userCount, setUserCount] = useState(0);
 
   function renderRole(role) {
     switch (role) {
       case 1:
-        return <Tag size='large'>{t('普通用户')}</Tag>;
+        return <Badge variant="outline">{t('普通用户')}</Badge>;
       case 10:
         return (
-          <Tag color='yellow' size='large'>
+          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
             {t('管理员')}
-          </Tag>
+          </Badge>
         );
       case 100:
         return (
-          <Tag color='orange' size='large'>
+          <Badge variant="outline" className="bg-orange-100 text-orange-800 hover:bg-orange-100">
             {t('超级管理员')}
-          </Tag>
+          </Badge>
         );
       default:
         return (
-          <Tag color='red' size='large'>
+          <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">
             {t('未知身份')}
-          </Tag>
+          </Badge>
         );
     }
   }
+
+  function renderStatus(status) {
+    switch (status) {
+      case 1:
+        return <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">{t('已激活')}</Badge>;
+      case 2:
+        return <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">{t('已封禁')}</Badge>;
+      default:
+        return <Badge variant="outline" className="bg-gray-100 text-gray-800 hover:bg-gray-100">{t('未知状态')}</Badge>;
+    }
+  }
+
   const columns = [
     {
       title: 'ID',
@@ -52,451 +110,277 @@ const UsersTable = () => {
       dataIndex: 'username',
     },
     {
-      title: t('分组'),
+      title: t('显示名称'),
+      dataIndex: 'display_name',
+    },
+    {
+      title: t('邮箱'),
+      dataIndex: 'email',
+    },
+    {
+      title: t('组'),
       dataIndex: 'group',
       render: (text, record, index) => {
-        return <div>{renderGroup(text)}</div>;
-      },
-    },
-    {
-      title: t('统计信息'),
-      dataIndex: 'info',
-      render: (text, record, index) => {
-        return (
-          <div>
-            <Space spacing={1}>
-              <Tooltip content={t('剩余额度')}>
-                <Tag color='white' size='large'>
-                  {renderQuota(record.quota)}
-                </Tag>
-              </Tooltip>
-              <Tooltip content={t('已用额度')}>
-                <Tag color='white' size='large'>
-                  {renderQuota(record.used_quota)}
-                </Tag>
-              </Tooltip>
-              <Tooltip content={t('调用次数')}>
-                <Tag color='white' size='large'>
-                  {renderNumber(record.request_count)}
-                </Tag>
-              </Tooltip>
-            </Space>
-          </div>
-        );
-      },
-    },
-    {
-      title: t('邀请信息'),
-      dataIndex: 'invite',
-      render: (text, record, index) => {
-        return (
-          <div>
-            <Space spacing={1}>
-              <Tooltip content={t('邀请人数')}>
-                <Tag color='white' size='large'>
-                  {renderNumber(record.aff_count)}
-                </Tag>
-              </Tooltip>
-              <Tooltip content={t('邀请总收益')}>
-                <Tag color='white' size='large'>
-                  {renderQuota(record.aff_history_quota)}
-                </Tag>
-              </Tooltip>
-              <Tooltip content={t('邀请人ID')}>
-                {record.inviter_id === 0 ? (
-                  <Tag color='white' size='large'>
-                    {t('无')}
-                  </Tag>
-                ) : (
-                  <Tag color='white' size='large'>
-                    {record.inviter_id}
-                  </Tag>
-                )}
-              </Tooltip>
-            </Space>
-          </div>
-        );
+        return <div className="text-sm">{renderGroup(text)}</div>;
       },
     },
     {
       title: t('角色'),
       dataIndex: 'role',
       render: (text, record, index) => {
-        return <div>{renderRole(text)}</div>;
+        return renderRole(text);
+      },
+    },
+    {
+      title: t('剩余额度'),
+      dataIndex: 'quota',
+      render: (text, record, index) => {
+        return <div className="text-sm">{renderQuota(parseInt(text))}</div>;
+      },
+    },
+    {
+      title: t('已用额度'),
+      dataIndex: 'used_quota',
+      render: (text, record, index) => {
+        return <div className="text-sm">{renderQuota(parseInt(text))}</div>;
       },
     },
     {
       title: t('状态'),
       dataIndex: 'status',
       render: (text, record, index) => {
+        return renderStatus(text);
+      },
+    },
+    {
+      title: t('操作'),
+      dataIndex: 'operation',
+      render: (text, record, index) => {
         return (
-          <div>
-            {record.DeletedAt !== null ? (
-              <Tag color='red'>{t('已注销')}</Tag>
-            ) : (
-              renderStatus(text)
-            )}
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => editUser(record)}
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              {t('编辑')}
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="h-8">
+                  <Trash className="mr-2 h-4 w-4" />
+                  {t('删除')}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('确认删除')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('确认删除此用户？删除后无法恢复，请谨慎操作！')}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('取消')}</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => deleteUser(record.id)}>
+                    {t('删除')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         );
       },
     },
-    {
-      title: '',
-      dataIndex: 'operate',
-      render: (text, record, index) => (
-        <div>
-          {record.DeletedAt !== null ? (
-            <></>
-          ) : (
-            <>
-              <Popconfirm
-                title={t('确定？')}
-                okType={'warning'}
-                onConfirm={() => {
-                  manageUser(record.id, 'promote', record);
-                }}
-              >
-                <Button theme='light' type='warning' style={{ marginRight: 1 }}>
-                  {t('提升')}
-                </Button>
-              </Popconfirm>
-              <Popconfirm
-                title={t('确定？')}
-                okType={'warning'}
-                onConfirm={() => {
-                  manageUser(record.id, 'demote', record);
-                }}
-              >
-                <Button theme='light' type='secondary' style={{ marginRight: 1 }}>
-                  {t('降级')}
-                </Button>
-              </Popconfirm>
-              {record.status === 1 ? (
-                <Button
-                  theme='light'
-                  type='warning'
-                  style={{ marginRight: 1 }}
-                  onClick={async () => {
-                    manageUser(record.id, 'disable', record);
-                  }}
-                >
-                  {t('禁用')}
-                </Button>
-              ) : (
-                <Button
-                  theme='light'
-                  type='secondary'
-                  style={{ marginRight: 1 }}
-                  onClick={async () => {
-                    manageUser(record.id, 'enable', record);
-                  }}
-                  disabled={record.status === 3}
-                >
-                  {t('启用')}
-                </Button>
-              )}
-              <Button
-                theme='light'
-                type='tertiary'
-                style={{ marginRight: 1 }}
-                onClick={() => {
-                  setEditingUser(record);
-                  setShowEditUser(true);
-                }}
-              >
-                {t('编辑')}
-              </Button>
-              <Popconfirm
-                title={t('确定是否要注销此用户？')}
-                content={t('相当于删除用户，此修改将不可逆')}
-                okType={'danger'}
-                position={'left'}
-                onConfirm={() => {
-                  manageUser(record.id, 'delete', record).then(() => {
-                    removeRecord(record.id);
-                  });
-                }}
-              >
-                <Button theme='light' type='danger' style={{ marginRight: 1 }}>
-                  {t('注销')}
-                </Button>
-              </Popconfirm>
-            </>
-          )}
-        </div>
-      ),
-    },
   ];
 
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activePage, setActivePage] = useState(1);
-  const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [searchGroup, setSearchGroup] = useState('');
-  const [groupOptions, setGroupOptions] = useState([]);
-  const [userCount, setUserCount] = useState(ITEMS_PER_PAGE);
-  const [showAddUser, setShowAddUser] = useState(false);
-  const [showEditUser, setShowEditUser] = useState(false);
-  const [editingUser, setEditingUser] = useState({
-    id: undefined,
-  });
-
-  const removeRecord = (key) => {
-    let newDataSource = [...users];
-    if (key != null) {
-      let idx = newDataSource.findIndex((data) => data.id === key);
-
-      if (idx > -1) {
-        // update deletedAt
-        newDataSource[idx].DeletedAt = new Date();
-        setUsers(newDataSource);
-      }
-    }
-  };
-
-  const setUserFormat = (users) => {
-    for (let i = 0; i < users.length; i++) {
-      users[i].key = users[i].id;
-    }
-    setUsers(users);
-  }
-
-  const loadUsers = async (startIdx, pageSize) => {
-    const res = await API.get(`/api/user/?p=${startIdx}&page_size=${pageSize}`);
-    const { success, message, data } = res.data;
-    if (success) {
-      const newPageData = data.items;
-      setActivePage(data.page);
-      setUserCount(data.total);
-      setUserFormat(newPageData);
-    } else {
-      showError(message);
-    }
-    setLoading(false);
-  };
-
-
-  useEffect(() => {
-    loadUsers(0, pageSize)
-      .then()
-      .catch((reason) => {
-        showError(reason);
-      });
-    fetchGroups().then();
-  }, []);
-
-  const manageUser = async (userId, action, record) => {
-    const res = await API.post('/api/user/manage', {
-      id: userId,
-      action,
-    });
-    const { success, message } = res.data;
-    if (success) {
-      showSuccess('操作成功完成！');
-      let user = res.data.data;
-      let newUsers = [...users];
-      if (action === 'delete') {
-      } else {
-        record.status = user.status;
-        record.role = user.role;
-      }
-      setUsers(newUsers);
-    } else {
-      showError(message);
-    }
-  };
-
-  const renderStatus = (status) => {
-    switch (status) {
-      case 1:
-        return <Tag size='large'>{t('已激活')}</Tag>;
-      case 2:
-        return (
-          <Tag size='large' color='red'>
-            {t('已封禁')}
-          </Tag>
-        );
-      default:
-        return (
-          <Tag size='large' color='grey'>
-            {t('未知状态')}
-          </Tag>
-        );
-    }
-  };
-
-  const searchUsers = async (startIdx, pageSize, searchKeyword, searchGroup) => {
-    if (searchKeyword === '' && searchGroup === '') {
-        // if keyword is blank, load files instead.
-        await loadUsers(startIdx, pageSize);
-        return;
-    }
-    setSearching(true);
-    const res = await API.get(`/api/user/search?keyword=${searchKeyword}&group=${searchGroup}&p=${startIdx}&page_size=${pageSize}`);
-    const { success, message, data } = res.data;
-    if (success) {
-        const newPageData = data.items;
-        setActivePage(data.page);
-        setUserCount(data.total);
-        setUserFormat(newPageData);
-    } else {
-        showError(message);
-    }
-    setSearching(false);
-  };
-
-  const handleKeywordChange = async (value) => {
-    setSearchKeyword(value.trim());
-  };
-
-  const handlePageChange = (page) => {
-    setActivePage(page);
-    if (searchKeyword === '' && searchGroup === '') {
-        loadUsers(page, pageSize).then();
-    } else {
-        searchUsers(page, pageSize, searchKeyword, searchGroup).then();
-    }
-  };
-
-  const closeAddUser = () => {
-    setShowAddUser(false);
-  };
-
-  const closeEditUser = () => {
-    setShowEditUser(false);
-    setEditingUser({
-      id: undefined,
-    });
-  };
-
-  const refresh = async () => {
-    setActivePage(1)
-    if (searchKeyword === '') {
-      await loadUsers(activePage, pageSize);
-    } else {
-      await searchUsers(activePage, pageSize, searchKeyword, searchGroup);
-    }
-  };
-
-  const fetchGroups = async () => {
+  const loadUsers = async (page) => {
+    setLoading(true);
+    const url = searchKeyword === '' 
+      ? `/api/user/?p=${page}` 
+      : `/api/user/?p=${page}&keyword=${searchKeyword}`;
     try {
-      let res = await API.get(`/api/group/`);
-      // add 'all' option
-      // res.data.data.unshift('all');
-      if (res === undefined) {
-        return;
+      const res = await API.get(url);
+      const { success, message, data } = res.data;
+      if (success) {
+        setUsers(data.users);
+        setUserCount(data.total);
+      } else {
+        showError(message);
       }
-      setGroupOptions(
-        res.data.data.map((group) => ({
-          label: group,
-          value: group,
-        })),
-      );
+      setLoading(false);
+    } catch (error) {
+      showError(error.message);
+      setLoading(false);
+    }
+  };
+
+  const onPageChange = (page) => {
+    setActivePage(page);
+    loadUsers(page);
+  };
+
+  const editUser = (user) => {
+    setEditingUser(user);
+    setShowEditDialog(true);
+  };
+
+  const deleteUser = async (id) => {
+    try {
+      const res = await API.delete(`/api/user/${id}/`);
+      const { success, message } = res.data;
+      if (success) {
+        showSuccess(t('删除成功'));
+        await loadUsers(activePage);
+      } else {
+        showError(message);
+      }
     } catch (error) {
       showError(error.message);
     }
   };
 
-  const handlePageSizeChange = async (size) => {
-    localStorage.setItem('page-size', size + '');
-    setPageSize(size);
-    setActivePage(1);
-    loadUsers(activePage, size)
-      .then()
-      .catch((reason) => {
-        showError(reason);
-      });
+  const refresh = async () => {
+    await loadUsers(activePage);
   };
 
+  const searchUsers = async () => {
+    setSearching(true);
+    setActivePage(1);
+    await loadUsers(1);
+    setSearching(false);
+  };
+
+  const handleKeywordChange = (value) => {
+    setSearchKeyword(value);
+  };
+
+  const handleKeywordKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      searchUsers().then();
+    }
+  };
+
+  useEffect(() => {
+    loadUsers(1).then();
+  }, []);
+
   return (
-    <>
-      <AddUser
-        refresh={refresh}
-        visible={showAddUser}
-        handleClose={closeAddUser}
-      ></AddUser>
-      <EditUser
-        refresh={refresh}
-        visible={showEditUser}
-        handleClose={closeEditUser}
-        editingUser={editingUser}
-      ></EditUser>
-      <Form
-        onSubmit={() => {
-          searchUsers(activePage, pageSize, searchKeyword, searchGroup);
-        }}
-        labelPosition='left'
-      >
-        <div style={{ display: 'flex' }}>
-          <Space>
-            <Tooltip content={t('支持搜索用户的 ID、用户名、显示名称和邮箱地址')}>
-              <Form.Input
-                label={t('搜索关键字')}
-                icon='search'
-                field='keyword'
-                iconPosition='left'
-                placeholder={t('搜索关键字')}
-                value={searchKeyword}
-                loading={searching}
-                onChange={(value) => handleKeywordChange(value)}
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center space-x-2">
+          <Input
+            placeholder={t('搜索关键字')}
+            value={searchKeyword}
+            onChange={(e) => handleKeywordChange(e.target.value)}
+            onKeyDown={handleKeywordKeyDown}
+            className="w-64"
+          />
+          <Button onClick={searchUsers} disabled={searching} className="gap-1">
+            <Search className="h-4 w-4" />
+            {searching ? t('搜索中...') : t('搜索')}
+          </Button>
+          <Button variant="outline" onClick={refresh} className="gap-1">
+            <RefreshCw className="h-4 w-4" />
+            {t('刷新')}
+          </Button>
+        </div>
+        <Button onClick={() => setShowAddDialog(true)} className="gap-1">
+          <PlusCircle className="h-4 w-4" />
+          {t('添加用户')}
+        </Button>
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {columns.map((column, index) => (
+              <TableHead key={index}>{column.title}</TableHead>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {users.map((user, index) => (
+              <TableRow key={user.id}>
+                {columns.map((column, columnIndex) => (
+                  <TableCell key={columnIndex}>
+                    {column.render ? column.render(user[column.dataIndex], user, index) : user[column.dataIndex]}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="mt-4 flex justify-center">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                onClick={() => onPageChange(Math.max(1, activePage - 1))}
+                className={activePage <= 1 ? "pointer-events-none opacity-50" : ""}
               />
-            </Tooltip>
-            
-            <Form.Select
-              field='group'
-              label={t('分组')}
-              optionList={groupOptions}
-              onChange={(value) => {
-                setSearchGroup(value);
-                searchUsers(activePage, pageSize, searchKeyword, value);
+            </PaginationItem>
+            {Array.from({ length: Math.min(5, Math.ceil(userCount / ITEMS_PER_PAGE)) }, (_, i) => {
+              const page = i + 1;
+              return (
+                <PaginationItem key={page}>
+                  <PaginationLink 
+                    isActive={page === activePage}
+                    onClick={() => onPageChange(page)}
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              );
+            })}
+            {Math.ceil(userCount / ITEMS_PER_PAGE) > 5 && (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            )}
+            <PaginationItem>
+              <PaginationNext 
+                onClick={() => onPageChange(Math.min(Math.ceil(userCount / ITEMS_PER_PAGE), activePage + 1))}
+                className={activePage >= Math.ceil(userCount / ITEMS_PER_PAGE) ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{t('添加用户')}</DialogTitle>
+          </DialogHeader>
+          <AddUser
+            onSuccess={() => {
+              setShowAddDialog(false);
+              refresh();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{t('编辑用户')}</DialogTitle>
+          </DialogHeader>
+          {editingUser && (
+            <EditUser
+              user={editingUser}
+              onSuccess={() => {
+                setShowEditDialog(false);
+                refresh();
               }}
             />
-            <Button
-              label={t('查询')}
-              type='primary'
-              htmlType='submit'
-              className='btn-margin-right'
-            >
-              {t('查询')}
-            </Button>
-            <Button
-              theme='light'
-              type='primary'
-              onClick={() => {
-                setShowAddUser(true);
-              }}
-            >
-              {t('添加用户')}
-            </Button>
-          </Space>
-        </div>
-      </Form>
-
-      <Table
-        columns={columns}
-        dataSource={users}
-        pagination={{
-          formatPageText: (page) =>
-            t('第 {{start}} - {{end}} 条，共 {{total}} 条', {
-              start: page.currentStart,
-              end: page.currentEnd,
-              total: users.length
-            }),
-          currentPage: activePage,
-          pageSize: pageSize,
-          total: userCount,
-          pageSizeOpts: [10, 20, 50, 100],
-          showSizeChanger: true,
-          onPageSizeChange: (size) => {
-            handlePageSizeChange(size);
-          },
-          onPageChange: handlePageChange,
-        }}
-        loading={loading}
-      />
-    </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

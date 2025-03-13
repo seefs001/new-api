@@ -1,14 +1,28 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Row, Spin, DatePicker } from '@douyinfe/semi-ui';
-import dayjs from 'dayjs';
-import { useTranslation } from 'react-i18next';
 import {
-  compareObjects,
   API,
+  compareObjects,
   showError,
   showSuccess,
   showWarning,
 } from '../../../helpers';
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../../components/ui/popover";
+import React, { useEffect, useRef, useState } from 'react';
+
+import { Button } from "../../../components/ui/button";
+import { Calendar } from "../../../components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { Label } from "../../../components/ui/label";
+import { Loader2 } from "lucide-react";
+import { Switch } from "../../../components/ui/switch";
+import { cn } from "../../../lib/utils";
+import dayjs from 'dayjs';
+import { format } from "date-fns";
+import { useTranslation } from 'react-i18next';
 
 export default function SettingsLog(props) {
   const { t } = useTranslation();
@@ -18,7 +32,6 @@ export default function SettingsLog(props) {
     LogConsumeEnabled: false,
     historyTimestamp: dayjs().subtract(1, 'month').toDate(),
   });
-  const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
 
   function onSubmit() {
@@ -57,22 +70,21 @@ export default function SettingsLog(props) {
         setLoading(false);
       });
   }
+
   async function onCleanHistoryLog() {
     try {
       setLoadingCleanHistoryLog(true);
-      if (!inputs.historyTimestamp) throw new Error(t('请选择日志记录时间'));
-      const res = await API.delete(
-        `/api/log/?target_timestamp=${Date.parse(inputs.historyTimestamp) / 1000}`,
-      );
+      const res = await API.post('/api/log/clean', {
+        timestamp: inputs.historyTimestamp.getTime() / 1000,
+      });
       const { success, message, data } = res.data;
       if (success) {
-        showSuccess(`${data} ${t('条日志已清理！')}`);
-        return;
+        showSuccess(t('清除成功，一共清除了 {{count}} 条记录', { count: data }));
       } else {
-        throw new Error(t('日志清理失败：') + message);
+        showError(message);
       }
     } catch (error) {
-      showError(error.message);
+      showError(t('清除历史记录失败，{{error}}', { error: error.message }));
     } finally {
       setLoadingCleanHistoryLog(false);
     }
@@ -85,65 +97,96 @@ export default function SettingsLog(props) {
         currentInputs[key] = props.options[key];
       }
     }
-    currentInputs['historyTimestamp'] = inputs.historyTimestamp;
-    setInputs(Object.assign(inputs, currentInputs));
-    setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
+    setInputs((prev) => ({
+      ...prev,
+      ...currentInputs,
+    }));
+    setInputsRow((prev) => ({
+      ...prev,
+      ...currentInputs,
+    }));
   }, [props.options]);
+
   return (
     <>
-      <Spin spinning={loading}>
-        <Form
-          values={inputs}
-          getFormApi={(formAPI) => (refForm.current = formAPI)}
-          style={{ marginBottom: 15 }}
-        >
-          <Form.Section text={t('日志设置')}>
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'LogConsumeEnabled'}
-                  label={t('启用额度消费日志记录')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) => {
+      {loading ? (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('日志设置')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="LogConsumeEnabled"
+                  checked={inputs.LogConsumeEnabled}
+                  onCheckedChange={(checked) => {
                     setInputs({
                       ...inputs,
-                      LogConsumeEnabled: value,
+                      LogConsumeEnabled: checked,
                     });
                   }}
                 />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Spin spinning={loadingCleanHistoryLog}>
-                  <Form.DatePicker
-                    label={t('日志记录时间')}
-                    field={'historyTimestamp'}
-                    type='dateTime'
-                    inputReadOnly={true}
-                    onChange={(value) => {
-                      setInputs({
-                        ...inputs,
-                        historyTimestamp: value,
-                      });
-                    }}
-                  />
-                  <Button size='default' onClick={onCleanHistoryLog}>
+                <Label htmlFor="LogConsumeEnabled">{t('启用额度消费日志记录')}</Label>
+              </div>
+              
+              <div className="space-y-4">
+                <Label htmlFor="historyTimestamp">{t('日志记录时间')}</Label>
+                <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="historyTimestamp"
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal sm:w-[240px]",
+                          !inputs.historyTimestamp && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {inputs.historyTimestamp ? (
+                          format(inputs.historyTimestamp, "PPP HH:mm:ss")
+                        ) : (
+                          <span>{t('选择日期')}</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={inputs.historyTimestamp}
+                        onSelect={(date) => 
+                          setInputs({
+                            ...inputs,
+                            historyTimestamp: date,
+                          })
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Button 
+                    onClick={onCleanHistoryLog}
+                    disabled={loadingCleanHistoryLog}
+                  >
+                    {loadingCleanHistoryLog && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t('清除历史日志')}
                   </Button>
-                </Spin>
-              </Col>
-            </Row>
-
-            <Row>
-              <Button size='default' onClick={onSubmit}>
+                </div>
+              </div>
+              
+              <Button onClick={onSubmit} className="mt-4">
                 {t('保存日志设置')}
               </Button>
-            </Row>
-          </Form.Section>
-        </Form>
-      </Spin>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

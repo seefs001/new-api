@@ -1,21 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Spin, Tabs } from '@douyinfe/semi-ui';
-import SettingsGeneral from '../pages/Setting/Operation/SettingsGeneral.js';
-import SettingsDrawing from '../pages/Setting/Operation/SettingsDrawing.js';
-import SettingsSensitiveWords from '../pages/Setting/Operation/SettingsSensitiveWords.js';
-import SettingsLog from '../pages/Setting/Operation/SettingsLog.js';
-import SettingsDataDashboard from '../pages/Setting/Operation/SettingsDataDashboard.js';
-import SettingsMonitoring from '../pages/Setting/Operation/SettingsMonitoring.js';
-import SettingsCreditLimit from '../pages/Setting/Operation/SettingsCreditLimit.js';
-import ModelSettingsVisualEditor from '../pages/Setting/Operation/ModelSettingsVisualEditor.js';
-import GroupRatioSettings from '../pages/Setting/Operation/GroupRatioSettings.js';
-import ModelRatioSettings from '../pages/Setting/Operation/ModelRatioSettings.js';
-
-
 import { API, showError, showSuccess } from '../helpers';
-import SettingsChats from '../pages/Setting/Operation/SettingsChats.js';
-import { useTranslation } from 'react-i18next';
+import { Card, CardContent } from '../components/ui/card';
+import React, { useEffect, useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+
+import GroupRatioSettings from '../pages/Setting/Operation/GroupRatioSettings.js';
+import { Loader2 } from 'lucide-react';
 import ModelRatioNotSetEditor from '../pages/Setting/Operation/ModelRationNotSetEditor.js';
+import ModelRatioSettings from '../pages/Setting/Operation/ModelRatioSettings.js';
+import ModelSettingsVisualEditor from '../pages/Setting/Operation/ModelSettingsVisualEditor.js';
+import SettingsChats from '../pages/Setting/Operation/SettingsChats.js';
+import SettingsCreditLimit from '../pages/Setting/Operation/SettingsCreditLimit.js';
+import SettingsDataDashboard from '../pages/Setting/Operation/SettingsDataDashboard.js';
+import SettingsDrawing from '../pages/Setting/Operation/SettingsDrawing.js';
+import SettingsGeneral from '../pages/Setting/Operation/SettingsGeneral.js';
+import SettingsLog from '../pages/Setting/Operation/SettingsLog.js';
+import SettingsMonitoring from '../pages/Setting/Operation/SettingsMonitoring.js';
+import SettingsSensitiveWords from '../pages/Setting/Operation/SettingsSensitiveWords.js';
+import { useTranslation } from 'react-i18next';
 
 const OperationSetting = () => {
   const { t } = useTranslation();
@@ -65,6 +66,7 @@ const OperationSetting = () => {
   });
 
   let [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("model");
 
   const getOptions = async () => {
     const res = await API.get('/api/option/');
@@ -97,6 +99,7 @@ const OperationSetting = () => {
       showError(message);
     }
   };
+  
   async function onRefresh() {
     try {
       setLoading(true);
@@ -114,60 +117,105 @@ const OperationSetting = () => {
   }, []);
 
   return (
-    <>
-      <Spin spinning={loading} size='large'>
-        {/* 通用设置 */}
-        <Card style={{ marginTop: '10px' }}>
-          <SettingsGeneral options={inputs} refresh={onRefresh} />
-        </Card>
-        {/* 绘图设置 */}
-        <Card style={{ marginTop: '10px' }}>
-          <SettingsDrawing options={inputs} refresh={onRefresh} />
-        </Card>
-        {/* 屏蔽词过滤设置 */}
-        <Card style={{ marginTop: '10px' }}>
-          <SettingsSensitiveWords options={inputs} refresh={onRefresh} />
-        </Card>
-        {/* 日志设置 */}
-        <Card style={{ marginTop: '10px' }}>
-          <SettingsLog options={inputs} refresh={onRefresh} />
-        </Card>
-        {/* 数据看板 */}
-        <Card style={{ marginTop: '10px' }}>
-          <SettingsDataDashboard options={inputs} refresh={onRefresh} />
-        </Card>
-        {/* 监控设置 */}
-        <Card style={{ marginTop: '10px' }}>
-          <SettingsMonitoring options={inputs} refresh={onRefresh} />
-        </Card>
-        {/* 额度设置 */}
-        <Card style={{ marginTop: '10px' }}>
-          <SettingsCreditLimit options={inputs} refresh={onRefresh} />
-        </Card>
-        {/* 聊天设置 */}
-        <Card style={{ marginTop: '10px' }}>
-          <SettingsChats options={inputs} refresh={onRefresh} />
-        </Card>
-        {/* 分组倍率设置 */}
-        <Card style={{ marginTop: '10px' }}>
-          <GroupRatioSettings options={inputs} refresh={onRefresh} />
-        </Card>
-        {/* 合并模型倍率设置和可视化倍率设置 */}
-        <Card style={{ marginTop: '10px' }}>
-          <Tabs type="line">
-            <Tabs.TabPane tab={t('模型倍率设置')} itemKey="model">
-              <ModelRatioSettings options={inputs} refresh={onRefresh} />
-            </Tabs.TabPane>
-            <Tabs.TabPane tab={t('可视化倍率设置')} itemKey="visual">
-              <ModelSettingsVisualEditor options={inputs} refresh={onRefresh} />
-            </Tabs.TabPane>
-            <Tabs.TabPane tab={t('未设置倍率模型')} itemKey="unset_models">
-              <ModelRatioNotSetEditor options={inputs} refresh={onRefresh} />
-            </Tabs.TabPane>
-          </Tabs>
-        </Card>
-      </Spin>
-    </>
+    <div className="space-y-6">
+      {loading && (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
+      
+      {!loading && (
+        <>
+          {/* 通用设置 */}
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <SettingsGeneral options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+          
+          {/* 绘图设置 */}
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <SettingsDrawing options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+          
+          {/* 屏蔽词过滤设置 */}
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <SettingsSensitiveWords options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+          
+          {/* 日志设置 */}
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <SettingsLog options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+          
+          {/* 数据看板 */}
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <SettingsDataDashboard options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+          
+          {/* 监控设置 */}
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <SettingsMonitoring options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+          
+          {/* 额度设置 */}
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <SettingsCreditLimit options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+          
+          {/* 聊天设置 */}
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <SettingsChats options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+          
+          {/* 分组倍率设置 */}
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <GroupRatioSettings options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+          
+          {/* 合并模型倍率设置和可视化倍率设置 */}
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <Tabs defaultValue="model" value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="mb-4">
+                  <TabsTrigger value="model">{t('模型倍率设置')}</TabsTrigger>
+                  <TabsTrigger value="visual">{t('可视化倍率设置')}</TabsTrigger>
+                  <TabsTrigger value="unset_models">{t('未设置倍率模型')}</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="model">
+                  <ModelRatioSettings options={inputs} refresh={onRefresh} />
+                </TabsContent>
+                
+                <TabsContent value="visual">
+                  <ModelSettingsVisualEditor options={inputs} refresh={onRefresh} />
+                </TabsContent>
+                
+                <TabsContent value="unset_models">
+                  <ModelRatioNotSetEditor options={inputs} refresh={onRefresh} />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
   );
 };
 

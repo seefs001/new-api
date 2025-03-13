@@ -1,8 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { UserContext } from '../context/User';
-import { StatusContext } from '../context/Status';
-import { useTranslation } from 'react-i18next';
+import '../index.css';
 
 import {
   API,
@@ -12,55 +8,48 @@ import {
   isMobile,
   showError,
 } from '../helpers';
-import '../index.css';
-
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
-  IconCalendarClock, IconChecklistStroked,
-  IconComment, IconCommentStroked,
-  IconCreditCard,
-  IconGift, IconHelpCircle,
-  IconHistogram,
-  IconHome,
-  IconImage,
-  IconKey,
-  IconLayers,
-  IconPriceTag,
-  IconSetting,
-  IconUser
-} from '@douyinfe/semi-icons';
-import { Avatar, Dropdown, Layout, Nav, Switch, Divider } from '@douyinfe/semi-ui';
+  BarChartIcon,
+  CalendarClockIcon,
+  CheckSquareIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CreditCardIcon,
+  GiftIcon,
+  HelpCircleIcon,
+  HomeIcon,
+  ImageIcon,
+  KeyIcon,
+  LayersIcon,
+  MessageCircleIcon,
+  MessageSquareIcon,
+  SettingsIcon,
+  TagIcon,
+  UserIcon,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "./ui/dropdown-menu";
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { useSetTheme, useTheme } from '../context/Theme/index.js';
+
+import { Button } from './ui/button';
+import { ScrollArea } from './ui/scroll-area';
+import { StatusContext } from '../context/Status';
+import { StyleContext } from '../context/Style/index.js';
+import { Switch } from './ui/switch';
+import { UserContext } from '../context/User';
+import { cn } from '../lib/utils';
 import { setStatusData } from '../helpers/data.js';
 import { stringToColor } from '../helpers/render.js';
-import { useSetTheme, useTheme } from '../context/Theme/index.js';
-import { StyleContext } from '../context/Style/index.js';
-import Text from '@douyinfe/semi-ui/lib/es/typography/text';
-
-// 自定义侧边栏按钮样式
-const navItemStyle = {
-  borderRadius: '6px',
-  margin: '4px 8px',
-};
-
-// 自定义侧边栏按钮悬停样式
-const navItemHoverStyle = {
-  backgroundColor: 'var(--semi-color-primary-light-default)',
-  color: 'var(--semi-color-primary)'
-};
-
-// 自定义侧边栏按钮选中样式
-const navItemSelectedStyle = {
-  backgroundColor: 'var(--semi-color-primary-light-default)',
-  color: 'var(--semi-color-primary)',
-  fontWeight: '600'
-};
-
-// 自定义图标样式
-const iconStyle = (itemKey, selectedKeys) => {
-  return {
-    fontSize: '18px',
-    color: selectedKeys.includes(itemKey) ? 'var(--semi-color-primary)' : 'var(--semi-color-text-2)',
-  };
-};
+import { useTranslation } from 'react-i18next';
 
 // Define routerMap as a constant outside the component
 const routerMap = {
@@ -96,26 +85,52 @@ const SiderBar = () => {
   const setTheme = useSetTheme();
   const location = useLocation();
   const [routerMapState, setRouterMapState] = useState(routerMap);
+  const navigate = useNavigate();
 
-  // 预先计算所有可能的图标样式
-  const allItemKeys = useMemo(() => {
-    const keys = ['home', 'channel', 'token', 'redemption', 'topup', 'user', 'log', 'midjourney',
-                 'setting', 'about', 'chat', 'detail', 'pricing', 'task', 'playground', 'personal'];
-    // 添加聊天项的keys
-    for (let i = 0; i < chatItems.length; i++) {
-      keys.push('chat' + i);
+  // 使用useEffect监听location变化，设置正确的选中项
+  useEffect(() => {
+    let pathname = location.pathname;
+    if (pathname.startsWith('/chat/')) {
+      const chatId = pathname.replace('/chat/', '');
+      setSelectedKeys(['chat' + chatId]);
+    } else {
+      for (const [key, value] of Object.entries(routerMapState)) {
+        if (pathname === value) {
+          setSelectedKeys([key]);
+          break;
+        }
+      }
     }
-    return keys;
-  }, [chatItems]);
+  }, [location, routerMapState]);
 
-  // 使用useMemo一次性计算所有图标样式
-  const iconStyles = useMemo(() => {
-    const styles = {};
-    allItemKeys.forEach(key => {
-      styles[key] = iconStyle(key, selectedKeys);
-    });
-    return styles;
-  }, [allItemKeys, selectedKeys]);
+  useEffect(() => {
+    localStorage.setItem('default_collapse_sidebar', isCollapsed.toString());
+  }, [isCollapsed]);
+
+  // Add effect for loading chat items
+  useEffect(() => {
+    let chats = localStorage.getItem('chats');
+    if (chats) {
+      try {
+        chats = JSON.parse(chats);
+        if (Array.isArray(chats)) {
+          let chatLabels = [];
+          for (let i = 0; i < chats.length; i++) {
+            // Extract the chat name (first key value in each chat object)
+            const chatName = Object.keys(chats[i])[0] || `Chat ${i+1}`;
+            chatLabels.push(chatName);
+          }
+          setChatItems(chatLabels);
+          
+          // Update router map with chat routes
+          updateRouterMapWithChats(chats);
+        }
+      } catch (e) {
+        console.error(e);
+        showError('聊天数据解析失败');
+      }
+    }
+  }, []);
 
   const workspaceItems = useMemo(
     () => [
@@ -123,43 +138,34 @@ const SiderBar = () => {
         text: t('数据看板'),
         itemKey: 'detail',
         to: '/detail',
-        icon: <IconCalendarClock />,
-        className:
-          localStorage.getItem('enable_data_export') === 'true'
-            ? ''
-            : 'tableHiddle',
+        icon: <CalendarClockIcon className="h-5 w-5" />,
+        isHidden: localStorage.getItem('enable_data_export') !== 'true',
       },
       {
         text: t('API令牌'),
         itemKey: 'token',
         to: '/token',
-        icon: <IconKey />,
+        icon: <KeyIcon className="h-5 w-5" />,
       },
       {
         text: t('使用日志'),
         itemKey: 'log',
         to: '/log',
-        icon: <IconHistogram />,
+        icon: <BarChartIcon className="h-5 w-5" />,
       },
       {
         text: t('绘图日志'),
         itemKey: 'midjourney',
         to: '/midjourney',
-        icon: <IconImage />,
-        className:
-          localStorage.getItem('enable_drawing') === 'true'
-            ? ''
-            : 'tableHiddle',
+        icon: <ImageIcon className="h-5 w-5" />,
+        isHidden: localStorage.getItem('enable_drawing') !== 'true',
       },
       {
         text: t('任务日志'),
         itemKey: 'task',
         to: '/task',
-        icon: <IconChecklistStroked />,
-        className:
-          localStorage.getItem('enable_task') === 'true'
-            ? ''
-            : 'tableHiddle',
+        icon: <CheckSquareIcon className="h-5 w-5" />,
+        isHidden: localStorage.getItem('enable_task') !== 'true',
       }
     ],
     [
@@ -176,13 +182,13 @@ const SiderBar = () => {
         text: t('钱包'),
         itemKey: 'topup',
         to: '/topup',
-        icon: <IconCreditCard />,
+        icon: <CreditCardIcon className="h-5 w-5" />,
       },
       {
         text: t('个人设置'),
         itemKey: 'personal',
         to: '/personal',
-        icon: <IconUser />,
+        icon: <UserIcon className="h-5 w-5" />,
       },
     ],
     [t],
@@ -194,27 +200,27 @@ const SiderBar = () => {
         text: t('渠道'),
         itemKey: 'channel',
         to: '/channel',
-        icon: <IconLayers />,
-        className: isAdmin() ? '' : 'tableHiddle',
+        icon: <LayersIcon className="h-5 w-5" />,
+        isHidden: !isAdmin(),
       },
       {
         text: t('兑换码'),
         itemKey: 'redemption',
         to: '/redemption',
-        icon: <IconGift />,
-        className: isAdmin() ? '' : 'tableHiddle',
+        icon: <GiftIcon className="h-5 w-5" />,
+        isHidden: !isAdmin(),
       },
       {
         text: t('用户管理'),
         itemKey: 'user',
         to: '/user',
-        icon: <IconUser />,
+        icon: <UserIcon className="h-5 w-5" />,
       },
       {
         text: t('系统设置'),
         itemKey: 'setting',
         to: '/setting',
-        icon: <IconSetting />,
+        icon: <SettingsIcon className="h-5 w-5" />,
       },
     ],
     [isAdmin(), t],
@@ -226,13 +232,13 @@ const SiderBar = () => {
         text: 'Playground',
         itemKey: 'playground',
         to: '/playground',
-        icon: <IconCommentStroked />,
+        icon: <MessageCircleIcon className="h-5 w-5" />,
       },
       {
         text: t('聊天'),
         itemKey: 'chat',
         items: chatItems,
-        icon: <IconComment />,
+        icon: <MessageSquareIcon className="h-5 w-5" />,
       },
     ],
     [chatItems, t],
@@ -249,248 +255,269 @@ const SiderBar = () => {
     }
     
     setRouterMapState(newRouterMap);
-    return newRouterMap;
   };
 
-  // Update the useEffect for chat items
-  useEffect(() => {
-    let chats = localStorage.getItem('chats');
-    if (chats) {
-      try {
-        chats = JSON.parse(chats);
-        if (Array.isArray(chats)) {
-          let chatItems = [];
-          for (let i = 0; i < chats.length; i++) {
-            let chat = {};
-            for (let key in chats[i]) {
-              chat.text = key;
-              chat.itemKey = 'chat' + i;
-              chat.to = '/chat/' + i;
-            }
-            chatItems.push(chat);
-          }
-          setChatItems(chatItems);
-          
-          // Update router map with chat routes
-          updateRouterMapWithChats(chats);
-        }
-      } catch (e) {
-        console.error(e);
-        showError('聊天数据解析失败')
-      }
-    }
-  }, []);
-
-  // Update the useEffect for route selection
-  useEffect(() => {
-    const currentPath = location.pathname;
-    let matchingKey = Object.keys(routerMapState).find(key => routerMapState[key] === currentPath);
-
-    // Handle chat routes
-    if (!matchingKey && currentPath.startsWith('/chat/')) {
-      const chatIndex = currentPath.split('/').pop();
-      if (!isNaN(chatIndex)) {
-        matchingKey = 'chat' + chatIndex;
-      } else {
-        matchingKey = 'chat';
-      }
-    }
-
-    // If we found a matching key, update the selected keys
-    if (matchingKey) {
-      setSelectedKeys([matchingKey]);
-    }
-  }, [location.pathname, routerMapState]);
-
-  useEffect(() => {
-    setIsCollapsed(styleState.siderCollapsed);
-  }, [styleState.siderCollapsed]);
-
-  // Custom divider style
-  const dividerStyle = {
-    margin: '8px 0',
-    opacity: 0.6,
+  // 获取用户信息
+  const getUserInfo = () => {
+    const userInfo = localStorage.getItem('user')
+      ? JSON.parse(localStorage.getItem('user'))
+      : {
+          username: 'Error',
+          role: '',
+        };
+    return userInfo;
   };
 
-  // Custom group label style
-  const groupLabelStyle = {
-    padding: '8px 16px',
-    color: 'var(--semi-color-text-2)',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+  // 渲染顶部用户信息卡片
+  const renderUserBlock = () => {
+    let userInfo = getUserInfo();
+    
+    return (
+      <div className={cn(
+        "p-4",
+        isCollapsed ? "items-center" : ""
+      )}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center space-x-2 cursor-pointer">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={userInfo.avatar || ""} alt={userInfo.username} />
+                <AvatarFallback style={{ backgroundColor: stringToColor(userInfo.username) }}>
+                  {userInfo.username.slice(0, 1).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {!isCollapsed && (
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{userInfo.username}</span>
+                  <span className="text-xs text-muted-foreground">{userInfo.role || t('用户')}</span>
+                </div>
+              )}
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => navigate('/personal')}>
+              <UserIcon className="mr-2 h-4 w-4" />
+              <span>{t('个人设置')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => switchTheme()}>
+              <div className="flex items-center w-full justify-between">
+                <span>{t('深色模式')}</span>
+                <Switch checked={theme === 'dark'} />
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout}>
+              {t('退出登录')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  };
+
+  // 处理退出登录
+  const logout = async () => {
+    const res = await API.get('/api/user/logout');
+    const { success, message } = res.data;
+    if (success) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      navigate('/login');
+    } else {
+      showError(message);
+    }
+  };
+
+  const renderNavItem = (item) => {
+    if (item.isHidden) return null;
+    
+    const isActive = selectedKeys.includes(item.itemKey);
+    
+    return (
+      <Link
+        key={item.itemKey}
+        to={item.to}
+        className={cn(
+          "flex items-center py-2 px-3 my-1 mx-2 rounded-md transition-colors",
+          isActive 
+            ? "bg-primary/10 text-primary font-medium" 
+            : "text-muted-foreground hover:bg-primary/5 hover:text-primary",
+          isCollapsed ? "justify-center" : ""
+        )}
+      >
+        {item.icon}
+        {!isCollapsed && <span className="ml-2">{item.text}</span>}
+      </Link>
+    );
+  };
+
+  const renderNavItemWithDropdown = (item) => {
+    if (!item.items || item.items.length === 0) return null;
+    
+    const isOpen = openedKeys.includes(item.itemKey);
+    
+    const toggleSubmenu = (e) => {
+      e.preventDefault();
+      setOpenedKeys(prev => 
+        prev.includes(item.itemKey) 
+          ? prev.filter(key => key !== item.itemKey) 
+          : [...prev, item.itemKey]
+      );
+    };
+    
+    return (
+      <div key={item.itemKey} className="my-1">
+        <button
+          onClick={toggleSubmenu}
+          className={cn(
+            "flex items-center py-2 px-3 mx-2 rounded-md w-full text-left transition-colors",
+            isOpen 
+              ? "bg-primary/10 text-primary font-medium" 
+              : "text-muted-foreground hover:bg-primary/5 hover:text-primary",
+            isCollapsed ? "justify-center" : ""
+          )}
+        >
+          {item.icon}
+          {!isCollapsed && (
+            <>
+              <span className="ml-2 flex-grow">{item.text}</span>
+              <ChevronDownIcon className={cn(
+                "h-4 w-4 transition-transform",
+                isOpen ? "transform rotate-180" : ""
+              )} />
+            </>
+          )}
+        </button>
+        
+        {isOpen && !isCollapsed && (
+          <div className="ml-4 pl-2 border-l border-border">
+            {item.items.map((subItem, index) => (
+              <Link
+                key={`${item.itemKey}${index}`}
+                to={`/chat/${index}`}
+                className={cn(
+                  "flex items-center py-2 px-3 my-1 mx-2 rounded-md transition-colors",
+                  selectedKeys.includes(`chat${index}`) 
+                    ? "bg-primary/10 text-primary font-medium" 
+                    : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                )}
+              >
+                <span className="truncate">{subItem}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // 切换侧边栏折叠状态
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+  };
+
+  // 切换主题
+  const switchTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    styleDispatch({ type: 'update', darkMode: newTheme === 'dark' });
   };
 
   return (
-    <>
-      <Nav
-        className="custom-sidebar-nav"
-        style={{ 
-          width: isCollapsed ? '60px' : '200px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-          borderRight: '1px solid var(--semi-color-border)',
-          background: 'var(--semi-color-bg-1)',
-          borderRadius: styleState.isMobile ? '0' : '0 8px 8px 0',
-          position: 'relative',
-          zIndex: 95,
-          height: '100%',
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch', // Improve scrolling on iOS devices
-        }}
-        defaultIsCollapsed={
-          localStorage.getItem('default_collapse_sidebar') === 'true'
-        }
-        isCollapsed={isCollapsed}
-        onCollapseChange={(collapsed) => {
-          setIsCollapsed(collapsed);
-          // styleDispatch({ type: 'SET_SIDER', payload: true });
-          styleDispatch({ type: 'SET_SIDER_COLLAPSED', payload: collapsed });
-          localStorage.setItem('default_collapse_sidebar', collapsed);
-
-          // 确保在收起侧边栏时有选中的项目，避免不必要的计算
-          if (selectedKeys.length === 0) {
-            const currentPath = location.pathname;
-            const matchingKey = Object.keys(routerMapState).find(key => routerMapState[key] === currentPath);
-
-            if (matchingKey) {
-              setSelectedKeys([matchingKey]);
-            } else if (currentPath.startsWith('/chat/')) {
-              setSelectedKeys(['chat']);
-            } else {
-              setSelectedKeys(['detail']); // 默认选中首页
-            }
-          }
-        }}
-        selectedKeys={selectedKeys}
-        itemStyle={navItemStyle}
-        hoverStyle={navItemHoverStyle}
-        selectedStyle={navItemSelectedStyle}
-        renderWrapper={({ itemElement, isSubNav, isInSubNav, props }) => {
-          return (
-            <Link
-              style={{ textDecoration: 'none' }}
-              to={routerMapState[props.itemKey] || routerMap[props.itemKey]}
-            >
-              {itemElement}
-            </Link>
-          );
-        }}
-        onSelect={(key) => {
-          if (key.itemKey.toString().startsWith('chat')) {
-            styleDispatch({ type: 'SET_INNER_PADDING', payload: false });
-          } else {
-            styleDispatch({ type: 'SET_INNER_PADDING', payload: true });
-          }
-          
-          // 如果点击的是已经展开的子菜单的父项，则收起子菜单
-          if (openedKeys.includes(key.itemKey)) {
-            setOpenedKeys(openedKeys.filter(k => k !== key.itemKey));
-          }
-          
-          setSelectedKeys([key.itemKey]);
-        }}
-        openKeys={openedKeys}
-        onOpenChange={(data) => {
-          setOpenedKeys(data.openKeys);
-        }}
-      >
-        {/* Chat Section - Only show if there are chat items */}
-        {chatMenuItems.map((item) => {
-          if (item.items && item.items.length > 0) {
-            return (
-              <Nav.Sub
-                key={item.itemKey}
-                itemKey={item.itemKey}
-                text={item.text}
-                icon={React.cloneElement(item.icon, { style: iconStyles[item.itemKey] })}
-              >
-                {item.items.map((subItem) => (
-                  <Nav.Item
-                    key={subItem.itemKey}
-                    itemKey={subItem.itemKey}
-                    text={subItem.text}
-                  />
-                ))}
-              </Nav.Sub>
-            );
-          } else {
-            return (
-              <Nav.Item
-                key={item.itemKey}
-                itemKey={item.itemKey}
-                text={item.text}
-                icon={React.cloneElement(item.icon, { style: iconStyles[item.itemKey] })}
-              />
-            );
-          }
-        })}
-
-        {/* Divider */}
-        <Divider style={dividerStyle} />
-
-        {/* Workspace Section */}
-        {!isCollapsed && <Text style={groupLabelStyle}>{t('控制台')}</Text>}
-        {workspaceItems.map((item) => (
-          <Nav.Item
-            key={item.itemKey}
-            itemKey={item.itemKey}
-            text={item.text}
-            icon={React.cloneElement(item.icon, { style: iconStyles[item.itemKey] })}
-            className={item.className}
-          />
-        ))}
-
-        {isAdmin() && (
-          <>
-            {/* Divider */}
-            <Divider style={dividerStyle} />
-
-            {/* Admin Section */}
-            {!isCollapsed && <Text style={groupLabelStyle}>{t('管理员')}</Text>}
-            {adminItems.map((item) => (
-              <Nav.Item
-                key={item.itemKey}
-                itemKey={item.itemKey}
-                text={item.text}
-                icon={React.cloneElement(item.icon, { style: iconStyles[item.itemKey] })}
-                className={item.className}
-              />
-            ))}
-          </>
+    <div className={cn(
+      "border-r border-border h-screen flex flex-col bg-background transition-all duration-300",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
+      {/* Logo Header */}
+      <div className="flex items-center justify-between p-4 border-b border-border">
+        {!isCollapsed && (
+          <Link to="/" className="flex items-center">
+            <img src={getLogo()} alt="Logo" className="h-8 w-8" />
+            <span className="ml-2 font-bold text-xl">{getSystemName()}</span>
+          </Link>
         )}
-
-        {/* Divider */}
-        <Divider style={dividerStyle} />
-
-        {/* Finance Management Section */}
-        {!isCollapsed && <Text style={groupLabelStyle}>{t('个人中心')}</Text>}
-        {financeItems.map((item) => (
-          <Nav.Item
-            key={item.itemKey}
-            itemKey={item.itemKey}
-            text={item.text}
-            icon={React.cloneElement(item.icon, { style: iconStyles[item.itemKey] })}
-            className={item.className}
-          />
-        ))}
-
-        <Nav.Footer
-          style={{
-            paddingBottom: styleState?.isMobile ? '112px' : '',
-          }}
-          collapseButton={true}
-          collapseText={(collapsed)=>
-            {
-              if(collapsed){
-                return t('展开侧边栏')
-              }
-                return t('收起侧边栏')
-            }
-          }
-        />
-      </Nav>
-    </>
+        {isCollapsed && (
+          <Link to="/" className="mx-auto">
+            <img src={getLogo()} alt="Logo" className="h-8 w-8" />
+          </Link>
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleCollapse}
+          className={cn(isCollapsed ? "mx-auto" : "")}
+        >
+          {isCollapsed ? <ChevronRightIcon className="h-4 w-4" /> : <ChevronLeftIcon className="h-4 w-4" />}
+        </Button>
+      </div>
+      
+      {/* User Info */}
+      {renderUserBlock()}
+      
+      {/* Navigation */}
+      <ScrollArea className="flex-grow">
+        <div className="py-2">
+          {/* Home Link */}
+          <Link
+            to="/"
+            className={cn(
+              "flex items-center py-2 px-3 my-1 mx-2 rounded-md transition-colors",
+              selectedKeys.includes('home') 
+                ? "bg-primary/10 text-primary font-medium" 
+                : "text-muted-foreground hover:bg-primary/5 hover:text-primary",
+              isCollapsed ? "justify-center" : ""
+            )}
+          >
+            <HomeIcon className="h-5 w-5" />
+            {!isCollapsed && <span className="ml-2">{t('首页')}</span>}
+          </Link>
+          
+          {/* Chatbot Section */}
+          <div className="mt-4">
+            {!isCollapsed && <div className="px-3 mb-2 text-xs font-semibold text-muted-foreground">{t('AI助手')}</div>}
+            {chatMenuItems.map(item => 
+              item.items ? renderNavItemWithDropdown(item) : renderNavItem(item)
+            )}
+          </div>
+          
+          {/* Workspace Section */}
+          <div className="mt-4">
+            {!isCollapsed && <div className="px-3 mb-2 text-xs font-semibold text-muted-foreground">{t('工作台')}</div>}
+            {workspaceItems.map(renderNavItem)}
+          </div>
+          
+          {/* Finance Section */}
+          <div className="mt-4">
+            {!isCollapsed && <div className="px-3 mb-2 text-xs font-semibold text-muted-foreground">{t('财务')}</div>}
+            {financeItems.map(renderNavItem)}
+          </div>
+          
+          {/* Admin Section */}
+          <div className="mt-4">
+            {!isCollapsed && <div className="px-3 mb-2 text-xs font-semibold text-muted-foreground">{t('管理')}</div>}
+            {adminItems.map(renderNavItem)}
+          </div>
+          
+          {/* About Section */}
+          <div className="mt-4">
+            <Link
+              to="/about"
+              className={cn(
+                "flex items-center py-2 px-3 my-1 mx-2 rounded-md transition-colors",
+                selectedKeys.includes('about') 
+                  ? "bg-primary/10 text-primary font-medium" 
+                  : "text-muted-foreground hover:bg-primary/5 hover:text-primary",
+                isCollapsed ? "justify-center" : ""
+              )}
+            >
+              <HelpCircleIcon className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-2">{t('关于')}</span>}
+            </Link>
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
   );
 };
 

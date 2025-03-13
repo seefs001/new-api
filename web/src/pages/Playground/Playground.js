@@ -1,14 +1,22 @@
-import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UserContext } from '../../context/User/index.js';
 import { API, getUserIdFromLocalStorage, showError } from '../../helpers/index.js';
-import { Card, Chat, Input, Layout, Select, Slider, TextArea, Typography, Button, Highlight } from '@douyinfe/semi-ui';
-import { SSE } from 'sse';
-import { IconSetting } from '@douyinfe/semi-icons';
-import { StyleContext } from '../../context/Style/index.js';
-import { useTranslation } from 'react-i18next';
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Loader2, Settings } from "lucide-react";
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { renderGroupOption, truncateText } from '../../helpers/render.js';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { SSE } from 'sse';
+import { Separator } from "../../components/ui/separator";
+import { Slider } from "../../components/ui/slider";
+import { StyleContext } from '../../context/Style/index.js';
+import { Textarea } from "../../components/ui/textarea";
+import { UserContext } from '../../context/User/index.js';
+import { useTranslation } from 'react-i18next';
+
+// The roleInfo object defines avatar and name for different roles in the chat
 const roleInfo = {
   user: {
     name: 'User',
@@ -130,12 +138,6 @@ const Playground = () => {
       showError(t(message));
     }
   };
-
-  const commonOuterStyle = {
-    border: '1px solid var(--semi-color-border)',
-    borderRadius: '16px',
-    margin: '0px 8px',
-  }
 
   const getSystemMessage = () => {
     if (systemPrompt !== '') {
@@ -271,151 +273,177 @@ const Playground = () => {
     if (!styleState.isMobile) return null;
     return (
       <Button
-        icon={<IconSetting />}
-        style={{
-          position: 'absolute',
-          left: showSettings ? -10 : -20,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          zIndex: 1000,
-          width: 40,
-          height: 40,
-          borderRadius: '0 20px 20px 0',
-          padding: 0,
-          boxShadow: '2px 0 8px rgba(0, 0, 0, 0.15)',
-        }}
+        variant="outline"
+        size="icon"
+        className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-r-full shadow-md"
         onClick={() => setShowSettings(!showSettings)}
-        theme="solid"
-        type="primary"
-      />
+      >
+        <Settings className="h-4 w-4" />
+      </Button>
     );
   };
 
-  function CustomInputRender(props) {
-    const { detailProps } = props;
-    const { clearContextNode, uploadNode, inputNode, sendNode, onClick } = detailProps;
+  // Render a chat message
+  const ChatMessage = ({ message }) => {
+    const isUser = message.role === 'user';
+    
+    return (
+      <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
+        <div className={`max-w-[80%] ${isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3`}>
+          {message.content}
+          {message.status === 'loading' && (
+            <Loader2 className="inline ml-2 h-4 w-4 animate-spin" />
+          )}
+        </div>
+      </div>
+    );
+  };
 
-    return <div style={{margin: '8px 16px', display: 'flex', flexDirection:'row',
-      alignItems: 'flex-end', borderRadius: 16,padding: 10, border: '1px solid var(--semi-color-border)'}}
-                onClick={onClick}
-    >
-      {/*{uploadNode}*/}
-      {inputNode}
-      {sendNode}
-    </div>
-  }
-
-  const renderInputArea = useCallback((props) => {
-    return (<CustomInputRender {...props} />)
-  }, []);
+  // Custom input component
+  const ChatInput = () => {
+    const [inputValue, setInputValue] = useState('');
+    
+    const handleSend = () => {
+      if (inputValue.trim()) {
+        onMessageSend(inputValue);
+        setInputValue('');
+      }
+    };
+    
+    return (
+      <div className="flex items-end border rounded-lg p-2 mt-2">
+        <Textarea
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder={t("请输入消息...")}
+          className="flex-grow min-h-[40px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+        />
+        <Button 
+          onClick={handleSend}
+          size="sm"
+          className="ml-2"
+        >
+          {t("发送")}
+        </Button>
+      </div>
+    );
+  };
 
   return (
-    <Layout style={{height: '100%'}}>
+    <div className="flex h-full">
       {(showSettings || !styleState.isMobile) && (
-        <Layout.Sider style={{ display: styleState.isMobile ? 'block' : 'initial' }}>
-          <Card style={commonOuterStyle}>
-            <div style={{ marginTop: 10 }}>
-              <Typography.Text strong>{t('分组')}：</Typography.Text>
-            </div>
-            <Select
-              placeholder={t('请选择分组')}
-              name='group'
-              required
-              selection
-              onChange={(value) => {
-                handleInputChange('group', value);
-              }}
-              value={inputs.group}
-              autoComplete='new-password'
-              optionList={groups}
-              renderOptionItem={renderGroupOption}
-              style={{ width: '100%' }}
-            />
-            <div style={{ marginTop: 10 }}>
-              <Typography.Text strong>{t('模型')}：</Typography.Text>
-            </div>
-            <Select
-              placeholder={t('请选择模型')}
-              name='model'
-              required
-              selection
-              searchPosition='dropdown'
-              filter
-              onChange={(value) => {
-                handleInputChange('model', value);
-              }}
-              value={inputs.model}
-              autoComplete='new-password'
-              optionList={models}
-            />
-            <div style={{ marginTop: 10 }}>
-              <Typography.Text strong>Temperature：</Typography.Text>
-            </div>
-            <Slider
-              step={0.1}
-              min={0.1}
-              max={1}
-              value={inputs.temperature}
-              onChange={(value) => {
-                handleInputChange('temperature', value);
-              }}
-            />
-            <div style={{ marginTop: 10 }}>
-              <Typography.Text strong>MaxTokens：</Typography.Text>
-            </div>
-            <Input
-              placeholder='MaxTokens'
-              name='max_tokens'
-              required
-              autoComplete='new-password'
-              defaultValue={0}
-              value={inputs.max_tokens}
-              onChange={(value) => {
-                handleInputChange('max_tokens', value);
-              }}
-            />
-
-            <div style={{ marginTop: 10 }}>
-              <Typography.Text strong>System：</Typography.Text>
-            </div>
-            <TextArea
-              placeholder='System Prompt'
-              name='system'
-              required
-              autoComplete='new-password'
-              autosize
-              defaultValue={systemPrompt}
-              // value={systemPrompt}
-              onChange={(value) => {
-                setSystemPrompt(value);
-              }}
-            />
-
+        <div className={`${styleState.isMobile ? 'absolute z-10 bg-background h-full' : 'w-72'} border-r`}>
+          <Card className="m-2 h-full overflow-auto">
+            <CardContent className="p-4 space-y-4">
+              <div>
+                <div className="mb-1 font-medium">{t('分组')}：</div>
+                <Select
+                  value={inputs.group}
+                  onValueChange={(value) => handleInputChange('group', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('请选择分组')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map((group) => (
+                      <SelectItem key={group.value} value={group.value}>
+                        {group.label} {group.ratio !== 1 ? `(${group.ratio}x)` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <div className="mb-1 font-medium">{t('模型')}：</div>
+                <Select
+                  value={inputs.model}
+                  onValueChange={(value) => handleInputChange('model', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('请选择模型')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models.map((model) => (
+                      <SelectItem key={model.value} value={model.value}>
+                        {model.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <div className="mb-1 font-medium">Temperature：</div>
+                <Slider
+                  value={[inputs.temperature]}
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  onValueChange={(value) => handleInputChange('temperature', value[0])}
+                />
+              </div>
+              
+              <div>
+                <div className="mb-1 font-medium">MaxTokens：</div>
+                <Input
+                  placeholder="MaxTokens"
+                  value={inputs.max_tokens}
+                  onChange={(e) => handleInputChange('max_tokens', e.target.value)}
+                />
+              </div>
+              
+              <div>
+                <div className="mb-1 font-medium">System：</div>
+                <Textarea
+                  placeholder="System Prompt"
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+            </CardContent>
           </Card>
-        </Layout.Sider>
-      )}
-      <Layout.Content>
-        <div style={{height: '100%', position: 'relative'}}>
-          <SettingsToggle />
-          <Chat
-            chatBoxRenderConfig={{
-              renderChatBoxAction: () => {
-                return <div></div>
-              }
-            }}
-            renderInputArea={renderInputArea}
-            roleConfig={roleInfo}
-            style={commonOuterStyle}
-            chats={message}
-            onMessageSend={onMessageSend}
-            showClearContext
-            onClear={() => {
-              setMessage([]);
-            }}
-          />
         </div>
-      </Layout.Content>
-    </Layout>
+      )}
+      
+      <div className="flex-1 h-full relative overflow-hidden">
+        <SettingsToggle />
+        
+        <div className="h-full flex flex-col p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">{t('聊天')}</h2>
+            <Button 
+              variant="outline" 
+              onClick={() => setMessage([])}
+              size="sm"
+            >
+              {t("清空对话")}
+            </Button>
+          </div>
+          
+          <div className="flex-1 overflow-auto border rounded-lg p-4 mb-4">
+            {message.length > 0 ? (
+              message.map((msg) => (
+                <ChatMessage key={msg.id} message={msg} />
+              ))
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                {t("开始一个新的对话")}
+              </div>
+            )}
+          </div>
+          
+          <ChatInput />
+        </div>
+      </div>
+    </div>
   );
 };
 

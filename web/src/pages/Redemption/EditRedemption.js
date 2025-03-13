@@ -1,6 +1,3 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import {
   API,
   downloadTextAsFile,
@@ -8,24 +5,46 @@ import {
   showError,
   showSuccess,
 } from '../../helpers';
-import { getQuotaPerUnit, renderQuota, renderQuotaWithPrompt } from '../../helpers/render';
 import {
-  AutoComplete,
-  Button,
-  Input,
-  Modal,
-  SideSheet,
-  Space,
-  Spin,
-  Typography,
-} from '@douyinfe/semi-ui';
-import Title from '@douyinfe/semi-ui/lib/es/typography/title';
-import { Divider } from 'semantic-ui-react';
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../components/ui/dialog";
+import React, { useEffect, useState } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "../../components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle
+} from "../../components/ui/sheet";
+import { getQuotaPerUnit, renderQuota, renderQuotaWithPrompt } from '../../helpers/render';
+import { useNavigate, useParams } from 'react-router-dom';
+
+// Shadcn UI components
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Loader2 } from "lucide-react";
+import { Separator } from "../../components/ui/separator";
+import { useTranslation } from 'react-i18next';
 
 const EditRedemption = (props) => {
   const { t } = useTranslation();
   const isEdit = props.editingRedemption.id !== undefined;
   const [loading, setLoading] = useState(isEdit);
+  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
+  const [downloadData, setDownloadData] = useState([]);
 
   const params = useParams();
   const navigate = useNavigate();
@@ -109,106 +128,141 @@ const EditRedemption = (props) => {
       for (let i = 0; i < data.length; i++) {
         text += data[i] + '\n';
       }
-      Modal.confirm({
-        title: t('兑换码创建成功'),
-        content: (
-          <div>
-            <p>{t('兑换码创建成功，是否下载兑换码？')}</p>
-            <p>{t('兑换码将以文本文件的形式下载，文件名为兑换码的名称。')}</p>
-          </div>
-        ),
-        onOk: () => {
-          downloadTextAsFile(text, `${inputs.name}.txt`);
-        },
-      });
+      setDownloadData(data);
+      setShowDownloadDialog(true);
     }
     setLoading(false);
   };
 
+  // Predefined quota options
+  const quotaOptions = [
+    { value: 500000, label: '1$' },
+    { value: 5000000, label: '10$' },
+    { value: 25000000, label: '50$' },
+    { value: 50000000, label: '100$' },
+    { value: 250000000, label: '500$' },
+    { value: 500000000, label: '1000$' },
+  ];
+
+  const handleDownload = () => {
+    let text = '';
+    for (let i = 0; i < downloadData.length; i++) {
+      text += downloadData[i] + '\n';
+    }
+    downloadTextAsFile(text, `${inputs.name}.txt`);
+    setShowDownloadDialog(false);
+  };
+
   return (
     <>
-      <SideSheet
-        placement={isEdit ? 'right' : 'left'}
-        title={
-          <Title level={3}>
-            {isEdit ? t('更新兑换码信息') : t('创建新的兑换码')}
-          </Title>
-        }
-        headerStyle={{ borderBottom: '1px solid var(--semi-color-border)' }}
-        bodyStyle={{ borderBottom: '1px solid var(--semi-color-border)' }}
-        visible={props.visiable}
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Space>
-              <Button theme='solid' size={'large'} onClick={submit}>
-                {t('提交')}
-              </Button>
-              <Button
-                theme='solid'
-                size={'large'}
-                type={'tertiary'}
-                onClick={handleCancel}
-              >
-                {t('取消')}
-              </Button>
-            </Space>
-          </div>
-        }
-        closeIcon={null}
-        onCancel={() => handleCancel()}
-        width={isMobile() ? '100%' : 600}
+      <Sheet
+        open={props.visiable}
+        onOpenChange={props.handleClose}
       >
-        <Spin spinning={loading}>
-          <Input
-            style={{ marginTop: 20 }}
-            label={t('名称')}
-            name='name'
-            placeholder={t('请输入名称')}
-            onChange={(value) => handleInputChange('name', value)}
-            value={name}
-            autoComplete='new-password'
-            required={!isEdit}
-          />
-          <Divider />
-          <div style={{ marginTop: 20 }}>
-            <Typography.Text>{t('额度') + renderQuotaWithPrompt(quota)}</Typography.Text>
-          </div>
-          <AutoComplete
-            style={{ marginTop: 8 }}
-            name='quota'
-            placeholder={t('请输入额度')}
-            onChange={(value) => handleInputChange('quota', value)}
-            value={quota}
-            autoComplete='new-password'
-            type='number'
-            position={'bottom'}
-            data={[
-              { value: 500000, label: '1$' },
-              { value: 5000000, label: '10$' },
-              { value: 25000000, label: '50$' },
-              { value: 50000000, label: '100$' },
-              { value: 250000000, label: '500$' },
-              { value: 500000000, label: '1000$' },
-            ]}
-          />
-          {!isEdit && (
-            <>
-              <Divider />
-              <Typography.Text>{t('生成数量')}</Typography.Text>
-              <Input
-                style={{ marginTop: 8 }}
-                label={t('生成数量')}
-                name='count'
-                placeholder={t('请输入生成数量')}
-                onChange={(value) => handleInputChange('count', value)}
-                value={count}
-                autoComplete='new-password'
-                type='number'
-              />
-            </>
+        <SheetContent className="sm:max-w-md md:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>
+              {isEdit ? t('更新兑换码信息') : t('创建新的兑换码')}
+            </SheetTitle>
+          </SheetHeader>
+          
+          {loading ? (
+            <div className="flex justify-center items-center h-full">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">{t('名称')}</Label>
+                <Input
+                  id="name"
+                  placeholder={t('请输入名称')}
+                  value={name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  autoComplete="new-password"
+                  required={!isEdit}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-2">
+                <Label>{`${t('额度')} ${renderQuotaWithPrompt(quota)}`}</Label>
+                <div className="flex flex-col space-y-2">
+                  <Select
+                    value={quota.toString()}
+                    onValueChange={(value) => handleInputChange('quota', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('请选择额度')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {quotaOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value.toString()}>
+                          {option.label} ({option.value})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Input
+                    type="number"
+                    placeholder={t('或直接输入额度')}
+                    value={quota}
+                    onChange={(e) => handleInputChange('quota', e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              {!isEdit && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label htmlFor="count">{t('生成数量')}</Label>
+                    <Input
+                      id="count"
+                      type="number"
+                      placeholder={t('请输入生成数量')}
+                      value={count}
+                      onChange={(e) => handleInputChange('count', e.target.value)}
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           )}
-        </Spin>
-      </SideSheet>
+          
+          <SheetFooter className="mt-4 flex justify-end space-x-2">
+            <Button variant="outline" onClick={handleCancel}>
+              {t('取消')}
+            </Button>
+            <Button onClick={submit} disabled={loading}>
+              {t('提交')}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+      
+      <Dialog open={showDownloadDialog} onOpenChange={setShowDownloadDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('兑换码创建成功')}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>{t('兑换码创建成功，是否下载兑换码？')}</p>
+            <p>{t('兑换码将以文本文件的形式下载，文件名为兑换码的名称。')}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDownloadDialog(false)}>
+              {t('取消')}
+            </Button>
+            <Button onClick={handleDownload}>
+              {t('下载')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

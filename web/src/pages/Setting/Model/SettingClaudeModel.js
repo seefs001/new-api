@@ -1,14 +1,21 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Row, Spin } from '@douyinfe/semi-ui';
 import {
-  compareObjects,
   API,
+  compareObjects,
   showError,
   showSuccess,
-  showWarning, verifyJSON
+  showWarning,
+  verifyJSON
 } from '../../../helpers';
+import { Alert, AlertDescription } from "../../../components/ui/alert";
+import React, { useEffect, useState } from 'react';
+
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
+import { Loader2 } from "lucide-react";
+import { Switch } from "../../../components/ui/switch";
+import { Textarea } from "../../../components/ui/textarea";
 import { useTranslation } from 'react-i18next';
-import Text from '@douyinfe/semi-ui/lib/es/typography/text';
 
 const CLAUDE_HEADER = {
   'claude-3-7-sonnet-20250219-thinking': {
@@ -33,10 +40,26 @@ export default function SettingClaudeModel(props) {
     'claude.default_max_tokens': '',
     'claude.thinking_adapter_budget_tokens_percentage': 0.8,
   });
-  const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
+  const [validationErrors, setValidationErrors] = useState({});
 
   function onSubmit() {
+    // First validate all JSON fields
+    const errors = {};
+    if (!verifyJSON(inputs['claude.model_headers_settings'])) {
+      errors['claude.model_headers_settings'] = t('不是合法的 JSON 字符串');
+    }
+    if (!verifyJSON(inputs['claude.default_max_tokens'])) {
+      errors['claude.default_max_tokens'] = t('不是合法的 JSON 字符串');
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors({});
+    
     const updateArray = compareObjects(inputs, inputsRow);
     if (!updateArray.length) return showWarning(t('你似乎并没有修改什么'));
     const requestQueue = updateArray.map((item) => {
@@ -75,97 +98,119 @@ export default function SettingClaudeModel(props) {
     }
     setInputs(currentInputs);
     setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
   }, [props.options]);
 
   return (
     <>
-      <Spin spinning={loading}>
-        <Form
-          values={inputs}
-          getFormApi={(formAPI) => (refForm.current = formAPI)}
-          style={{ marginBottom: 15 }}
-        >
-          <Form.Section text={t('Claude设置')}>
-            <Row>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.TextArea
-                  label={t('Claude请求头覆盖')}
-                  field={'claude.model_headers_settings'}
-                  placeholder={t('为一个 JSON 文本，例如：') + '\n' + JSON.stringify(CLAUDE_HEADER, null, 2)}
-                  extraText={t('示例') + '\n' + JSON.stringify(CLAUDE_HEADER, null, 2)}
-                  autosize={{ minRows: 6, maxRows: 12 }}
-                  trigger='blur'
-                  stopValidateWithError
-                  rules={[
-                    {
-                      validator: (rule, value) => verifyJSON(value),
-                      message: t('不是合法的 JSON 字符串')
-                    }
-                  ]}
-                  onChange={(value) => setInputs({ ...inputs, 'claude.model_headers_settings': value })}
+      {loading ? (
+        <div className="flex justify-center items-center py-4">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <h3 className="text-lg font-medium">{t('Claude设置')}</h3>
+          
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="claude-headers-settings">{t('Claude请求头覆盖')}</Label>
+              <Textarea
+                id="claude-headers-settings"
+                value={inputs['claude.model_headers_settings']}
+                onChange={(e) => 
+                  setInputs({
+                    ...inputs,
+                    'claude.model_headers_settings': e.target.value,
+                  })
+                }
+                placeholder={t('为一个 JSON 文本，例如：') + '\n' + JSON.stringify(CLAUDE_HEADER, null, 2)}
+                rows={6}
+                className={`font-mono resize-y ${validationErrors['claude.model_headers_settings'] ? "border-destructive" : ""}`}
+              />
+              {validationErrors['claude.model_headers_settings'] && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertDescription>{validationErrors['claude.model_headers_settings']}</AlertDescription>
+                </Alert>
+              )}
+              <p className="text-sm text-muted-foreground">
+                {t('示例') + '\n' + JSON.stringify(CLAUDE_HEADER, null, 2)}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="claude-max-tokens">{t('缺省 MaxTokens')}</Label>
+              <Textarea
+                id="claude-max-tokens"
+                value={inputs['claude.default_max_tokens']}
+                onChange={(e) => 
+                  setInputs({
+                    ...inputs,
+                    'claude.default_max_tokens': e.target.value,
+                  })
+                }
+                placeholder={t('为一个 JSON 文本，例如：') + '\n' + JSON.stringify(CLAUDE_DEFAULT_MAX_TOKENS, null, 2)}
+                rows={6}
+                className={`font-mono resize-y ${validationErrors['claude.default_max_tokens'] ? "border-destructive" : ""}`}
+              />
+              {validationErrors['claude.default_max_tokens'] && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertDescription>{validationErrors['claude.default_max_tokens']}</AlertDescription>
+                </Alert>
+              )}
+              <p className="text-sm text-muted-foreground">
+                {t('示例') + '\n' + JSON.stringify(CLAUDE_DEFAULT_MAX_TOKENS, null, 2)}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="claude-thinking-adapter"
+                  checked={inputs['claude.thinking_adapter_enabled']}
+                  onCheckedChange={(checked) => 
+                    setInputs({
+                      ...inputs,
+                      'claude.thinking_adapter_enabled': checked,
+                    })
+                  }
                 />
-              </Col>
-            </Row>
-            <Row>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.TextArea
-                  label={t('缺省 MaxTokens')}
-                  field={'claude.default_max_tokens'}
-                  placeholder={t('为一个 JSON 文本，例如：') + '\n' + JSON.stringify(CLAUDE_DEFAULT_MAX_TOKENS, null, 2)}
-                  extraText={t('示例') + '\n' + JSON.stringify(CLAUDE_DEFAULT_MAX_TOKENS, null, 2)}
-                  autosize={{ minRows: 6, maxRows: 12 }}
-                  trigger='blur'
-                  stopValidateWithError
-                  rules={[
-                    {
-                      validator: (rule, value) => verifyJSON(value),
-                      message: t('不是合法的 JSON 字符串')
-                    }
-                  ]}
-                  onChange={(value) => setInputs({ ...inputs, 'claude.default_max_tokens': value })}
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Col span={16}>
-                <Form.Switch
-                  label={t('启用Claude思考适配（-thinking后缀）')}
-                  field={'claude.thinking_adapter_enabled'}
-                  onChange={(value) => setInputs({ ...inputs, 'claude.thinking_adapter_enabled': value })}
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Col span={16}>
-                {/*//展示MaxTokens和BudgetTokens的计算公式, 并展示实际数字*/}
-                <Text>
-                  {t('Claude思考适配 BudgetTokens = MaxTokens * BudgetTokens 百分比')}
-                </Text>
-              </Col>
-            </Row>
-            <Row>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.InputNumber
-                  label={t('思考适配 BudgetTokens 百分比')}
-                  field={'claude.thinking_adapter_budget_tokens_percentage'}
-                  initValue={''}
-                  extraText={t('0.1-1之间的小数')}
+                <Label htmlFor="claude-thinking-adapter">
+                  {t('启用Claude思考适配（-thinking后缀）')}
+                </Label>
+              </div>
+              
+              <p className="text-sm pl-6">
+                {t('Claude思考适配 BudgetTokens = MaxTokens * BudgetTokens 百分比')}
+              </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="claude-budget-percentage">{t('思考适配 BudgetTokens 百分比')}</Label>
+                <Input
+                  id="claude-budget-percentage"
+                  type="number"
                   min={0.1}
                   max={1}
-                  onChange={(value) => setInputs({ ...inputs, 'claude.thinking_adapter_budget_tokens_percentage': value })}
+                  step={0.1}
+                  value={inputs['claude.thinking_adapter_budget_tokens_percentage']}
+                  onChange={(e) => 
+                    setInputs({
+                      ...inputs,
+                      'claude.thinking_adapter_budget_tokens_percentage': parseFloat(e.target.value),
+                    })
+                  }
+                  className="max-w-xs"
                 />
-              </Col>
-            </Row>
+                <p className="text-sm text-muted-foreground">
+                  {t('0.1-1之间的小数')}
+                </p>
+              </div>
+            </div>
+          </div>
 
-            <Row>
-              <Button size='default' onClick={onSubmit}>
-                {t('保存')}
-              </Button>
-            </Row>
-          </Form.Section>
-        </Form>
-      </Spin>
+          <Button onClick={onSubmit} className="mt-6">
+            {t('保存')}
+          </Button>
+        </div>
+      )}
     </>
   );
 }

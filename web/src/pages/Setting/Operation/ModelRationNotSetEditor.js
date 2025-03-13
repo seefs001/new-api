@@ -1,8 +1,38 @@
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../../components/ui/dialog";
+import { Loader2, Plus, Save, Search, X, Zap } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "../../../components/ui/radio-group";
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Input, Modal, Form, Space, Typography, Radio, Notification } from '@douyinfe/semi-ui';
-import { IconDelete, IconPlus, IconSearch, IconSave, IconBolt } from '@douyinfe/semi-icons';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../components/ui/table";
 import { showError, showSuccess } from '../../../helpers';
+
 import { API } from '../../../helpers';
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 import { useTranslation } from 'react-i18next';
 
 export default function ModelRatioNotSetEditor(props) {
@@ -21,7 +51,7 @@ export default function ModelRatioNotSetEditor(props) {
   const [batchFillValue, setBatchFillValue] = useState('');
   const [batchRatioValue, setBatchRatioValue] = useState('');
   const [batchCompletionRatioValue, setBatchCompletionRatioValue] = useState('');
-  const { Text } = Typography;
+  
   // 定义可选的每页显示条数
   const pageSizeOptions = [10, 20, 50, 100];
 
@@ -46,504 +76,439 @@ export default function ModelRatioNotSetEditor(props) {
   }, []);
 
   useEffect(() => {
-    try {
-      const modelPrice = JSON.parse(props.options.ModelPrice || '{}');
-      const modelRatio = JSON.parse(props.options.ModelRatio || '{}');
-      const completionRatio = JSON.parse(props.options.CompletionRatio || '{}');
-
-      // 找出所有未设置价格和倍率的模型
-      const unsetModels = enabledModels.filter(modelName => {
-        const hasPrice = modelPrice[modelName] !== undefined;
-        const hasRatio = modelRatio[modelName] !== undefined;
-        
-        // 如果模型没有价格或者没有倍率设置，则显示
-        return !hasPrice && !hasRatio;
-      });
-
-      // 创建模型数据
-      const modelData = unsetModels.map(name => ({
-        name,
-        price: modelPrice[name] || '',
-        ratio: modelRatio[name] || '',
-        completionRatio: completionRatio[name] || ''
-      }));
-
-      setModels(modelData);
-      // 清空选择
-      setSelectedRowKeys([]);
-    } catch (error) {
-      console.error(t('JSON解析错误:'), error);
-    }
+    fetchUnsetModels();
   }, [props.options, enabledModels]);
 
-  // 首先声明分页相关的工具函数
-  const getPagedData = (data, currentPage, pageSize) => {
-    const start = (currentPage - 1) * pageSize;
-    const end = start + pageSize;
-    return data.slice(start, end);
-  };
-
-  // 处理页面大小变化
-  const handlePageSizeChange = (size) => {
-    setPageSize(size);
-    // 重新计算当前页，避免数据丢失
-    const totalPages = Math.ceil(filteredModels.length / size);
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages || 1);
-    }
-  };
-
-  // 在 return 语句之前，先处理过滤和分页逻辑
-  const filteredModels = models.filter(model =>
-    searchText ? model.name.toLowerCase().includes(searchText.toLowerCase()) : true
-  );
-
-  // 然后基于过滤后的数据计算分页数据
-  const pagedData = getPagedData(filteredModels, currentPage, pageSize);
-
-  const SubmitData = async () => {
+  const fetchUnsetModels = async () => {
     setLoading(true);
-    const output = {
-      ModelPrice: JSON.parse(props.options.ModelPrice || '{}'),
-      ModelRatio: JSON.parse(props.options.ModelRatio || '{}'),
-      CompletionRatio: JSON.parse(props.options.CompletionRatio || '{}')
-    };
-
     try {
-      // 数据转换 - 只处理已修改的模型
-      models.forEach(model => {
-        // 只有当用户设置了值时才更新
-        if (model.price !== '') {
-          // 如果价格不为空，则转换为浮点数，忽略倍率参数
-          output.ModelPrice[model.name] = parseFloat(model.price);
-        } else {
-          if (model.ratio !== '') output.ModelRatio[model.name] = parseFloat(model.ratio);
-          if (model.completionRatio !== '') output.CompletionRatio[model.name] = parseFloat(model.completionRatio);
-        }
-      });
-
-      // 准备API请求数组
-      const finalOutput = {
-        ModelPrice: JSON.stringify(output.ModelPrice, null, 2),
-        ModelRatio: JSON.stringify(output.ModelRatio, null, 2),
-        CompletionRatio: JSON.stringify(output.CompletionRatio, null, 2)
-      };
-
-      const requestQueue = Object.entries(finalOutput).map(([key, value]) => {
-        return API.put('/api/option/', {
-          key,
-          value
-        });
-      });
-
-      // 批量处理请求
-      const results = await Promise.all(requestQueue);
-
-      // 验证结果
-      if (requestQueue.length === 1) {
-        if (results.includes(undefined)) return;
-      } else if (requestQueue.length > 1) {
-        if (results.includes(undefined)) {
-          return showError(t('部分保存失败，请重试'));
-        }
+      if (!props.options.ModelRatio) {
+        return;
       }
-
-      // 检查每个请求的结果
-      for (const res of results) {
-        if (!res.data.success) {
-          return showError(res.data.message);
-        }
+      const modelRatio = JSON.parse(props.options.ModelRatio);
+      const allUnsetModels = enabledModels.filter(model => !modelRatio[model]);
+      
+      // 应用搜索过滤
+      let filteredModels = [...allUnsetModels];
+      if (searchText) {
+        filteredModels = allUnsetModels.filter(
+          model => model.toLowerCase().includes(searchText.toLowerCase())
+        );
       }
-
-      showSuccess(t('保存成功'));
-      props.refresh();
-      // 重新获取未设置的模型
-      getAllEnabledModels();
-
+      
+      setModels(filteredModels);
     } catch (error) {
-      console.error(t('保存失败:'), error);
-      showError(t('保存失败，请重试'));
+      console.error(t('获取未设置倍率模型失败:'), error);
+      showError(t('获取未设置倍率模型失败'));
     } finally {
       setLoading(false);
     }
   };
 
-  const columns = [
-    {
-      title: t('模型名称'),
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: t('模型固定价格'),
-      dataIndex: 'price',
-      key: 'price',
-      render: (text, record) => (
-        <Input
-          value={text}
-          placeholder={t('按量计费')}
-          onChange={value => updateModel(record.name, 'price', value)}
-        />
-      )
-    },
-    {
-      title: t('模型倍率'),
-      dataIndex: 'ratio',
-      key: 'ratio',
-      render: (text, record) => (
-        <Input
-          value={text}
-          placeholder={record.price !== '' ? t('模型倍率') : t('输入模型倍率')}
-          disabled={record.price !== ''}
-          onChange={value => updateModel(record.name, 'ratio', value)}
-        />
-      )
-    },
-    {
-      title: t('补全倍率'),
-      dataIndex: 'completionRatio',
-      key: 'completionRatio',
-      render: (text, record) => (
-        <Input
-          value={text}
-          placeholder={record.price !== '' ? t('补全倍率') : t('输入补全倍率')}
-          disabled={record.price !== ''}
-          onChange={value => updateModel(record.name, 'completionRatio', value)}
-        />
-      )
-    }
-  ];
-
-  const updateModel = (name, field, value) => {
-    if (value !== '' && isNaN(value)) {
-      showError(t('请输入数字'));
-      return;
-    }
-    setModels(prev =>
-      prev.map(model =>
-        model.name === name
-          ? { ...model, [field]: value }
-          : model
-      )
-    );
+  const handleSearch = (value) => {
+    setSearchText(value);
+    setCurrentPage(1);
+    fetchUnsetModels();
   };
 
-  const addModel = (values) => {
-    // 检查模型名称是否存在, 如果存在则拒绝添加
-    if (models.some(model => model.name === values.name)) {
-      showError(t('模型名称已存在'));
-      return;
-    }
-    setModels(prev => [{
-      name: values.name,
-      price: values.price || '',
-      ratio: values.ratio || '',
-      completionRatio: values.completionRatio || ''
-    }, ...prev]);
-    setVisible(false);
-    showSuccess(t('添加成功'));
+  const handleEdit = (model) => {
+    setCurrentModel(model);
+    setVisible(true);
   };
 
-  // 批量填充功能
-  const handleBatchFill = () => {
-    if (selectedRowKeys.length === 0) {
-      showError(t('请先选择需要批量设置的模型'));
-      return;
-    }
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
 
-    if (batchFillType === 'bothRatio') {
-      if (batchRatioValue === '' || batchCompletionRatioValue === '') {
-        showError(t('请输入模型倍率和补全倍率'));
-        return;
-      }
-      if (isNaN(batchRatioValue) || isNaN(batchCompletionRatioValue)) {
-        showError(t('请输入有效的数字'));
-        return;
-      }
-    } else {
-      if (batchFillValue === '') {
-        showError(t('请输入填充值'));
-        return;
-      }
-      if (isNaN(batchFillValue)) {
-        showError(t('请输入有效的数字'));
-        return;
-      }
-    }
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
 
-    // 根据选择的类型批量更新模型
-    setModels(prev => 
-      prev.map(model => {
-        if (selectedRowKeys.includes(model.name)) {
-          if (batchFillType === 'price') {
-            return {
-              ...model,
-              price: batchFillValue,
-              ratio: '',
-              completionRatio: ''
-            };
-          } else if (batchFillType === 'ratio') {
-            return {
-              ...model,
-              price: '',
-              ratio: batchFillValue
-            };
-          } else if (batchFillType === 'completionRatio') {
-            return {
-              ...model,
-              price: '',
-              completionRatio: batchFillValue
-            };
-          } else if (batchFillType === 'bothRatio') {
-            return {
-              ...model,
-              price: '',
-              ratio: batchRatioValue,
-              completionRatio: batchCompletionRatioValue
-            };
-          }
+  const handleSaveEdit = async (modelName, ratio, completionRatio) => {
+    try {
+      if (!props.options.ModelRatio || !props.options.CompletionRatio) {
+        showError(t('模型倍率或补全倍率未设置'));
+        return;
+      }
+      
+      // Update ModelRatio
+      const modelRatio = JSON.parse(props.options.ModelRatio);
+      modelRatio[modelName] = parseFloat(ratio);
+      
+      // Update CompletionRatio
+      const completionRatio = JSON.parse(props.options.CompletionRatio);
+      completionRatio[modelName] = parseFloat(completionRatio);
+      
+      const updateRequests = [
+        API.put('/api/option/', {
+          key: 'ModelRatio',
+          value: JSON.stringify(modelRatio),
+        }),
+        API.put('/api/option/', {
+          key: 'CompletionRatio',
+          value: JSON.stringify(completionRatio),
+        })
+      ];
+      
+      await Promise.all(updateRequests);
+      
+      showSuccess(t('保存成功'));
+      props.refresh();
+      setVisible(false);
+    } catch (error) {
+      console.error(t('保存失败:'), error);
+      showError(t('保存失败'));
+    }
+  };
+
+  const handleBatchSave = async () => {
+    try {
+      if (!props.options.ModelRatio || !props.options.CompletionRatio) {
+        showError(t('模型倍率或补全倍率未设置'));
+        return;
+      }
+      
+      if (selectedRowKeys.length === 0) {
+        showError(t('请选择至少一个模型'));
+        return;
+      }
+      
+      if (batchFillType === 'ratio' && (!batchRatioValue || !batchCompletionRatioValue)) {
+        showError(t('请输入倍率和补全倍率'));
+        return;
+      }
+      
+      const modelRatio = JSON.parse(props.options.ModelRatio);
+      const completionRatio = JSON.parse(props.options.CompletionRatio);
+      
+      // 根据选择的类型执行不同的批量填充
+      if (batchFillType === 'ratio') {
+        const ratio = parseFloat(batchRatioValue);
+        const compRatio = parseFloat(batchCompletionRatioValue);
+        
+        selectedRowKeys.forEach(model => {
+          modelRatio[model] = ratio;
+          completionRatio[model] = compRatio;
+        });
+      } else if (batchFillType === 'copy') {
+        if (!batchFillValue) {
+          showError(t('请输入要复制的模型名称'));
+          return;
         }
-        return model;
-      })
-    );
-
-    setBatchVisible(false);
-    Notification.success({
-      title: t('批量设置成功'),
-      content: t('已为 {{count}} 个模型设置{{type}}', {
-        count: selectedRowKeys.length,
-        type: batchFillType === 'price' ? t('固定价格') : 
-              batchFillType === 'ratio' ? t('模型倍率') : 
-              batchFillType === 'completionRatio' ? t('补全倍率') : t('模型倍率和补全倍率')
-      }),
-      duration: 3,
-    });
-  };
-
-  const handleBatchTypeChange = (value) => {
-    console.log(t('Changing batch type to:'), value);
-    setBatchFillType(value);
-    
-    // 切换类型时清空对应的值
-    if (value !== 'bothRatio') {
-      setBatchFillValue('');
-    } else {
-      setBatchRatioValue('');
-      setBatchCompletionRatioValue('');
+        
+        // 检查源模型是否存在
+        if (!modelRatio[batchFillValue]) {
+          showError(t('要复制的模型不存在或没有设置倍率'));
+          return;
+        }
+        
+        const sourceModelRatio = modelRatio[batchFillValue];
+        const sourceCompletionRatio = completionRatio[batchFillValue] || 1;
+        
+        selectedRowKeys.forEach(model => {
+          modelRatio[model] = sourceModelRatio;
+          completionRatio[model] = sourceCompletionRatio;
+        });
+      }
+      
+      const updateRequests = [
+        API.put('/api/option/', {
+          key: 'ModelRatio',
+          value: JSON.stringify(modelRatio),
+        }),
+        API.put('/api/option/', {
+          key: 'CompletionRatio',
+          value: JSON.stringify(completionRatio),
+        })
+      ];
+      
+      await Promise.all(updateRequests);
+      
+      showSuccess(t('批量保存成功'));
+      props.refresh();
+      setBatchVisible(false);
+      setSelectedRowKeys([]);
+    } catch (error) {
+      console.error(t('批量保存失败:'), error);
+      showError(t('批量保存失败'));
     }
   };
 
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (selectedKeys) => {
-      setSelectedRowKeys(selectedKeys);
-    },
-  };
+  const paginatedModels = models.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+  
+  const totalPages = Math.ceil(models.length / pageSize);
 
   return (
-    <>
-      <Space vertical align="start" style={{ width: '100%' }}>
-        <Space>
-          <Button icon={<IconPlus />} onClick={() => setVisible(true)}>
-            {t('添加模型')}
-          </Button>
-          <Button 
-            icon={<IconBolt />} 
-            type="secondary"
-            onClick={() => setBatchVisible(true)}
-            disabled={selectedRowKeys.length === 0}
-          >
-            {t('批量设置')} ({selectedRowKeys.length})
-          </Button>
-          <Button type="primary" icon={<IconSave />} onClick={SubmitData} loading={loading}>
-            {t('应用更改')}
-          </Button>
-          <Input
-            prefix={<IconSearch />}
-            placeholder={t('搜索模型名称')}
-            value={searchText}
-            onChange={value => {
-              setSearchText(value)
-              setCurrentPage(1);
-            }}
-            style={{ width: 200 }}
-          />
-        </Space>
-
-        <Text>{t('此页面仅显示未设置价格或倍率的模型，设置后将自动从列表中移除')}</Text>
-        
-        <Table
-          columns={columns}
-          dataSource={pagedData}
-          rowSelection={rowSelection}
-          rowKey="name"
-          pagination={{
-            currentPage: currentPage,
-            pageSize: pageSize,
-            total: filteredModels.length,
-            onPageChange: page => setCurrentPage(page),
-            onPageSizeChange: handlePageSizeChange,
-            pageSizeOptions: pageSizeOptions,
-            formatPageText: (page) =>
-              t('第 {{start}} - {{end}} 条，共 {{total}} 条', {
-                start: page.currentStart,
-                end: page.currentEnd,
-                total: filteredModels.length
-              }),
-            showTotal: true,
-            showSizeChanger: true
-          }}
-          empty={
-            <div style={{ textAlign: 'center', padding: '20px' }}>
-              {t('没有未设置的模型')}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex justify-between items-center">
+          <span>{t('未设置倍率模型')}</span>
+          <div className="flex items-center space-x-2">
+            <div className="relative">
+              <Search className="h-4 w-4 absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-8 max-w-xs"
+                placeholder={t('搜索模型名称')}
+                value={searchText}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
             </div>
-          }
-        />
-      </Space>
-
-      {/* 添加模型弹窗 */}
-      <Modal
-        title={t('添加模型')}
-        visible={visible}
-        onCancel={() => setVisible(false)}
-        onOk={() => {
-          currentModel && addModel(currentModel);
-        }}
-      >
-        <Form>
-          <Form.Input
-            field="name"
-            label={t('模型名称')}
-            placeholder="strawberry"
-            required
-            onChange={value => setCurrentModel(prev => ({ ...prev, name: value }))}
-          />
-          <Form.Switch
-            field="priceMode"
-            label={<>{t('定价模式')}：{currentModel?.priceMode ? t("固定价格") : t("倍率模式")}</>}
-            onChange={checked => {
-              setCurrentModel(prev => ({
-                ...prev,
-                price: '',
-                ratio: '',
-                completionRatio: '',
-                priceMode: checked
-              }));
-            }}
-          />
-          {currentModel?.priceMode ? (
-            <Form.Input
-              field="price"
-              label={t('固定价格(每次)')}
-              placeholder={t('输入每次价格')}
-              onChange={value => setCurrentModel(prev => ({ ...prev, price: value }))}
-            />
-          ) : (
-            <>
-              <Form.Input
-                field="ratio"
-                label={t('模型倍率')}
-                placeholder={t('输入模型倍率')}
-                onChange={value => setCurrentModel(prev => ({ ...prev, ratio: value }))}
-              />
-              <Form.Input
-                field="completionRatio"
-                label={t('补全倍率')}
-                placeholder={t('输入补全价格')}
-                onChange={value => setCurrentModel(prev => ({ ...prev, completionRatio: value }))}
-              />
-            </>
-          )}
-        </Form>
-      </Modal>
-
-      {/* 批量设置弹窗 */}
-      <Modal
-        title={t('批量设置模型参数')}
-        visible={batchVisible}
-        onCancel={() => setBatchVisible(false)}
-        onOk={handleBatchFill}
-        width={500}
-      >
-        <Form>
-          <Form.Section text={t('设置类型')}>
-            <div style={{ marginBottom: '16px' }}>
-              <Space>
-                <Radio
-                  checked={batchFillType === 'price'}
-                  onChange={() => handleBatchTypeChange('price')}
-                >
-                  {t('固定价格')}
-                </Radio>
-                <Radio
-                  checked={batchFillType === 'ratio'}
-                  onChange={() => handleBatchTypeChange('ratio')}
-                >
-                  {t('模型倍率')}
-                </Radio>
-                <Radio
-                  checked={batchFillType === 'completionRatio'}
-                  onChange={() => handleBatchTypeChange('completionRatio')}
-                >
-                  {t('补全倍率')}
-                </Radio>
-                <Radio
-                  checked={batchFillType === 'bothRatio'}
-                  onChange={() => handleBatchTypeChange('bothRatio')}
-                >
-                  {t('模型倍率和补全倍率同时设置')}
-                </Radio>
-              </Space>
-            </div>
-          </Form.Section>
-          
-          {batchFillType === 'bothRatio' ? (
-            <>
-              <Form.Input
-                field="batchRatioValue"
-                label={t('模型倍率值')}
-                placeholder={t('请输入模型倍率')}
-                value={batchRatioValue}
-                onChange={value => setBatchRatioValue(value)}
-              />
-              <Form.Input
-                field="batchCompletionRatioValue"
-                label={t('补全倍率值')}
-                placeholder={t('请输入补全倍率')}
-                value={batchCompletionRatioValue}
-                onChange={value => setBatchCompletionRatioValue(value)}
-              />
-            </>
-          ) : (
-            <Form.Input
-              field="batchFillValue"
-              label={
-                batchFillType === 'price' 
-                  ? t('固定价格值') 
-                  : batchFillType === 'ratio'
-                    ? t('模型倍率值')
-                    : t('补全倍率值')
-              }
-              placeholder={t('请输入数值')}
-              value={batchFillValue}
-              onChange={value => setBatchFillValue(value)}
-            />
-          )}
-          
-          <Text type="tertiary">
-            {t('将为选中的 ')} <Text strong>{selectedRowKeys.length}</Text> {t(' 个模型设置相同的值')}
-          </Text>
-          <div style={{ marginTop: '8px' }}>
-            <Text type="tertiary">
-              {t('当前设置类型: ')} <Text strong>{
-                batchFillType === 'price' ? t('固定价格') : 
-                batchFillType === 'ratio' ? t('模型倍率') : 
-                batchFillType === 'completionRatio' ? t('补全倍率') : t('模型倍率和补全倍率')
-              }</Text>
-            </Text>
+            <Button variant="outline" onClick={() => setBatchVisible(true)} disabled={models.length === 0}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('批量设置')}
+            </Button>
           </div>
-        </Form>
-      </Modal>
-    </>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <>
+            <div className="border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <Input 
+                        type="checkbox" 
+                        className="w-4 h-4"
+                        checked={selectedRowKeys.length === paginatedModels.length && paginatedModels.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRowKeys(paginatedModels);
+                          } else {
+                            setSelectedRowKeys([]);
+                          }
+                        }}
+                      />
+                    </TableHead>
+                    <TableHead>{t('模型名称')}</TableHead>
+                    <TableHead className="text-right">{t('操作')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedModels.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-8">
+                        {t('没有未设置倍率的模型')}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedModels.map((model) => (
+                      <TableRow key={model}>
+                        <TableCell>
+                          <Input 
+                            type="checkbox" 
+                            className="w-4 h-4"
+                            checked={selectedRowKeys.includes(model)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedRowKeys([...selectedRowKeys, model]);
+                              } else {
+                                setSelectedRowKeys(selectedRowKeys.filter(key => key !== model));
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>{model}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(model)}>
+                            {t('设置')}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {models.length > 0 && (
+              <div className="flex justify-between items-center mt-4">
+                <div className="flex items-center space-x-2">
+                  <Label>{t('每页显示')}</Label>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(value) => handlePageSizeChange(Number(value))}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue placeholder={pageSize} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pageSizeOptions.map(size => (
+                        <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-muted-foreground">
+                    {t('共')} {models.length} {t('条')}
+                  </span>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    {t('上一页')}
+                  </Button>
+                  <span className="text-sm">
+                    {currentPage} / {Math.max(1, totalPages)}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage >= totalPages}
+                  >
+                    {t('下一页')}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        
+        {/* 单模型编辑对话框 */}
+        <Dialog open={visible} onOpenChange={setVisible}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('设置模型倍率')}</DialogTitle>
+              <DialogDescription>
+                {currentModel && t('为模型 {{model}} 设置倍率', { model: currentModel })}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="modelRatio">{t('模型倍率')}</Label>
+                <Input
+                  id="modelRatio"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder={t('请输入模型倍率')}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="completionRatio">{t('补全倍率')}</Label>
+                <Input
+                  id="completionRatio"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder={t('请输入补全倍率')}
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">{t('取消')}</Button>
+              </DialogClose>
+              <Button 
+                onClick={() => {
+                  const ratioInput = document.getElementById('modelRatio');
+                  const completionRatioInput = document.getElementById('completionRatio');
+                  handleSaveEdit(
+                    currentModel,
+                    ratioInput?.value || '1',
+                    completionRatioInput?.value || '1'
+                  );
+                }}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {t('保存')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* 批量设置对话框 */}
+        <Dialog open={batchVisible} onOpenChange={setBatchVisible}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('批量设置模型倍率')}</DialogTitle>
+              <DialogDescription>
+                {t('已选择 {{count}} 个模型', { count: selectedRowKeys.length })}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <RadioGroup value={batchFillType} onValueChange={setBatchFillType}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="ratio" id="ratio" />
+                  <Label htmlFor="ratio">{t('指定倍率')}</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="copy" id="copy" />
+                  <Label htmlFor="copy">{t('从其他模型复制')}</Label>
+                </div>
+              </RadioGroup>
+              
+              {batchFillType === 'ratio' ? (
+                <div className="space-y-4 pl-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="batchRatio">{t('模型倍率')}</Label>
+                    <Input
+                      id="batchRatio"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={batchRatioValue}
+                      onChange={(e) => setBatchRatioValue(e.target.value)}
+                      placeholder={t('请输入模型倍率')}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="batchCompletionRatio">{t('补全倍率')}</Label>
+                    <Input
+                      id="batchCompletionRatio"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={batchCompletionRatioValue}
+                      onChange={(e) => setBatchCompletionRatioValue(e.target.value)}
+                      placeholder={t('请输入补全倍率')}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 pl-6">
+                  <Label htmlFor="modelToCopy">{t('要复制的模型')}</Label>
+                  <Input
+                    id="modelToCopy"
+                    value={batchFillValue}
+                    onChange={(e) => setBatchFillValue(e.target.value)}
+                    placeholder={t('请输入模型名称')}
+                  />
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">{t('取消')}</Button>
+              </DialogClose>
+              <Button onClick={handleBatchSave}>
+                <Zap className="h-4 w-4 mr-2" />
+                {t('批量保存')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
   );
 }

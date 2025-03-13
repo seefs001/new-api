@@ -1,12 +1,21 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Banner, Button, Col, Form, Row, Spin, Collapse, Modal } from '@douyinfe/semi-ui';
 import {
-  compareObjects,
   API,
+  compareObjects,
   showError,
   showSuccess,
   showWarning,
 } from '../../../helpers';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../../components/ui/accordion";
+import { Alert, AlertDescription, AlertTitle } from "../../../components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import React, { useEffect, useRef, useState } from 'react';
+
+import { Button } from "../../../components/ui/button";
+import { Checkbox } from "../../../components/ui/checkbox";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
+import { Loader2 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
 export default function GeneralSettings(props) {
@@ -24,11 +33,10 @@ export default function GeneralSettings(props) {
     DemoSiteEnabled: false,
     SelfUseModeEnabled: false,
   });
-  const refForm = useRef();
+  const formRef = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
 
-  function onChange(value, e) {
-    const name = e.target.id;
+  function onChange(name, value) {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
   }
 
@@ -50,195 +58,195 @@ export default function GeneralSettings(props) {
     setLoading(true);
     Promise.all(requestQueue)
       .then((res) => {
-        if (requestQueue.length === 1) {
-          if (res.includes(undefined)) return;
-        } else if (requestQueue.length > 1) {
-          if (res.includes(undefined)) return showError(t('部分保存失败，请重试'));
-        }
         showSuccess(t('保存成功'));
-        props.refresh();
+        setInputsRow(inputs);
       })
-      .catch(() => {
-        showError(t('保存失败，请重试'));
+      .catch((err) => {
+        showError(t('保存失败'));
       })
       .finally(() => {
         setLoading(false);
       });
   }
 
-  useEffect(() => {
-    const currentInputs = {};
-    for (let key in props.options) {
-      if (Object.keys(inputs).includes(key)) {
-        currentInputs[key] = props.options[key];
+  const loadOptions = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/api/option/');
+      const { success, message, data } = res.data;
+      if (success) {
+        let newInputs = {};
+        data.forEach((item) => {
+          if (item.key === 'QuotaPerUnit') {
+            if (item.value === '') {
+              setShowQuotaWarning(true);
+            }
+          }
+          if (
+            item.key === 'DisplayInCurrencyEnabled' ||
+            item.key === 'DisplayTokenStatEnabled' ||
+            item.key === 'DefaultCollapseSidebar' ||
+            item.key === 'DemoSiteEnabled' ||
+            item.key === 'SelfUseModeEnabled'
+          ) {
+            newInputs[item.key] = item.value === 'true';
+          } else {
+            newInputs[item.key] = item.value;
+          }
+        });
+        setInputs(newInputs);
+        setInputsRow(newInputs);
+      } else {
+        showError(message);
       }
+    } catch (error) {
+      showError(t('获取设置项失败'));
+    } finally {
+      setLoading(false);
     }
-    setInputs(currentInputs);
-    setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
-  }, [props.options]);
+  };
+
+  useEffect(() => {
+    loadOptions().then();
+  }, []);
 
   return (
-    <>
-      <Spin spinning={loading}>
-        <Banner
-          type='warning'
-          description={t('聊天链接功能已经弃用，请使用下方聊天设置功能')}
-        />
-        <Form
-          values={inputs}
-          getFormApi={(formAPI) => (refForm.current = formAPI)}
-          style={{ marginBottom: 15 }}
-        >
-          <Form.Section text={t('通用设置')}>
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Input
-                  field={'TopUpLink'}
-                  label={t('充值链接')}
-                  initValue={''}
-                  placeholder={t('例如发卡网站的购买链接')}
-                  onChange={onChange}
-                  showClear
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Input
-                  field={'general_setting.docs_link'}
-                  label={t('文档地址')}
-                  initValue={''}
-                  placeholder={t('例如 https://docs.newapi.pro')}
-                  onChange={onChange}
-                  showClear
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Input
-                  field={'QuotaPerUnit'}
-                  label={t('单位美元额度')}
-                  initValue={''}
-                  placeholder={t('一单位货币能兑换的额度')}
-                  onChange={onChange}
-                  showClear
-                  onClick={() => setShowQuotaWarning(true)}
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Input
-                  field={'RetryTimes'}
-                  label={t('失败重试次数')}
-                  initValue={''}
-                  placeholder={t('失败重试次数')}
-                  onChange={onChange}
-                  showClear
-                />
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'DisplayInCurrencyEnabled'}
-                  label={t('以货币形式显示额度')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) => {
-                    setInputs({
-                      ...inputs,
-                      DisplayInCurrencyEnabled: value,
-                    });
-                  }}
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'DisplayTokenStatEnabled'}
-                  label={t('额度查询接口返回令牌额度而非用户额度')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      DisplayTokenStatEnabled: value,
-                    })
-                  }
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'DefaultCollapseSidebar'}
-                  label={t('默认折叠侧边栏')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      DefaultCollapseSidebar: value,
-                    })
-                  }
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'DemoSiteEnabled'}
-                  label={t('演示站点模式')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      DemoSiteEnabled: value
-                    })
-                  }
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  field={'SelfUseModeEnabled'}
-                  label={t('自用模式')}
-                  extraText={t('开启后不限制：必须设置模型倍率')}
-                  size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
-                  onChange={(value) =>
-                    setInputs({
-                      ...inputs,
-                      SelfUseModeEnabled: value
-                    })
-                  }
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Button size='default' onClick={onSubmit}>
-                {t('保存通用设置')}
-              </Button>
-            </Row>
-          </Form.Section>
-        </Form>
-      </Spin>
+    <div className="space-y-6">
+      {loading && (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
       
-      <Modal
-        title={t('警告')}
-        visible={showQuotaWarning}
-        onOk={() => setShowQuotaWarning(false)}
-        onCancel={() => setShowQuotaWarning(false)}
-        closeOnEsc={true}
-        width={500}
-      >
-        <Banner
-          type='warning'
-          description={t('此设置用于系统内部计算，默认值500000是为了精确到6位小数点设计，不推荐修改。')}
-          bordered
-          fullMode={false}
-          closeIcon={null}
-        />
-      </Modal>
-    </>
+      {showQuotaWarning && (
+        <Alert variant="warning" className="mb-4">
+          <AlertTitle>{t('警告')}</AlertTitle>
+          <AlertDescription>
+            {t('您尚未设置单位额度价格，这将导致充值功能无法正常使用！')}
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('通用设置')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="TopUpLink">{t('充值链接')}</Label>
+                <Input
+                  id="TopUpLink"
+                  value={inputs.TopUpLink}
+                  onChange={(e) => onChange('TopUpLink', e.target.value)}
+                  placeholder={t('请输入充值链接')}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="general_setting.docs_link">{t('文档链接')}</Label>
+                <Input
+                  id="general_setting.docs_link"
+                  value={inputs['general_setting.docs_link']}
+                  onChange={(e) => onChange('general_setting.docs_link', e.target.value)}
+                  placeholder={t('请输入文档链接')}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="QuotaPerUnit">{t('单位额度价格')}</Label>
+                <Input
+                  id="QuotaPerUnit"
+                  value={inputs.QuotaPerUnit}
+                  onChange={(e) => onChange('QuotaPerUnit', e.target.value)}
+                  placeholder={t('请输入单位额度价格')}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="RetryTimes">{t('重试次数')}</Label>
+                <Input
+                  id="RetryTimes"
+                  value={inputs.RetryTimes}
+                  onChange={(e) => onChange('RetryTimes', e.target.value)}
+                  placeholder={t('请输入重试次数')}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="DisplayInCurrencyEnabled"
+                  checked={inputs.DisplayInCurrencyEnabled}
+                  onCheckedChange={(checked) => onChange('DisplayInCurrencyEnabled', checked)}
+                />
+                <Label htmlFor="DisplayInCurrencyEnabled">{t('以货币形式显示额度')}</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="DisplayTokenStatEnabled"
+                  checked={inputs.DisplayTokenStatEnabled}
+                  onCheckedChange={(checked) => onChange('DisplayTokenStatEnabled', checked)}
+                />
+                <Label htmlFor="DisplayTokenStatEnabled">{t('显示 Token 统计')}</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="DefaultCollapseSidebar"
+                  checked={inputs.DefaultCollapseSidebar}
+                  onCheckedChange={(checked) => onChange('DefaultCollapseSidebar', checked)}
+                />
+                <Label htmlFor="DefaultCollapseSidebar">{t('默认折叠侧边栏')}</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="DemoSiteEnabled"
+                  checked={inputs.DemoSiteEnabled}
+                  onCheckedChange={(checked) => onChange('DemoSiteEnabled', checked)}
+                />
+                <Label htmlFor="DemoSiteEnabled">{t('演示站点模式')}</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="SelfUseModeEnabled"
+                  checked={inputs.SelfUseModeEnabled}
+                  onCheckedChange={(checked) => onChange('SelfUseModeEnabled', checked)}
+                />
+                <Label htmlFor="SelfUseModeEnabled">{t('自用模式')}</Label>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <div className="flex justify-end">
+        <Button onClick={onSubmit} disabled={loading}>
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {t('保存')}
+        </Button>
+      </div>
+      
+      <Dialog open={showQuotaWarning} onOpenChange={setShowQuotaWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('警告')}</DialogTitle>
+            <DialogDescription>
+              {t('您尚未设置单位额度价格，这将导致充值功能无法正常使用！')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowQuotaWarning(false)}>
+              {t('我知道了')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

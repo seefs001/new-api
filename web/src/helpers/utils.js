@@ -1,7 +1,6 @@
-import { Toast } from '@douyinfe/semi-ui';
-import { toastConstants } from '../constants';
 import React from 'react';
 import { toast } from 'react-toastify';
+import { toastConstants } from '../constants';
 
 const HTMLToastContent = ({ htmlContent }) => {
   return <div dangerouslySetInnerHTML={{ __html: htmlContent }} />;

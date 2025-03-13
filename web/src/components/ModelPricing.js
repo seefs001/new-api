@@ -1,28 +1,50 @@
-import React, { useContext, useEffect, useRef, useMemo, useState } from 'react';
 import { API, copy, showError, showInfo, showSuccess } from '../helpers';
-import { useTranslation } from 'react-i18next';
-
 import {
-  Banner,
-  Input,
-  Layout,
-  Modal,
-  Space,
-  Table,
-  Tag,
-  Tooltip,
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "./ui/alert";
+import {
+  AlertCircle,
+  Check,
+  HelpCircle,
+  Image as ImageIcon,
+  MoreHorizontal
+} from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import {
   Popover,
-  ImagePreview,
-  Button,
-} from '@douyinfe/semi-ui';
+  PopoverContent,
+  PopoverTrigger,
+} from "./ui/popover";
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  IconMore,
-  IconVerify,
-  IconUploadError,
-  IconHelpCircle,
-} from '@douyinfe/semi-icons';
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
+
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { UserContext } from '../context/User/index.js';
-import Text from '@douyinfe/semi-ui/lib/es/typography/text';
+import { useTranslation } from 'react-i18next';
 
 const ModelPricing = () => {
   const { t } = useTranslation();
@@ -42,13 +64,15 @@ const ModelPricing = () => {
       []
   );
 
-  const handleChange = (value) => {
+  const handleChange = (e) => {
     if (compositionRef.current.isComposition) {
       return;
     }
+    const value = e.target.value;
     const newFilteredValue = value ? [value] : [];
     setFilteredValue(newFilteredValue);
   };
+
   const handleCompositionStart = () => {
     compositionRef.current.isComposition = true;
   };
@@ -65,15 +89,15 @@ const ModelPricing = () => {
     switch (type) {
       case 1:
         return (
-          <Tag color='teal' size='large'>
+          <Badge variant="outline" className="text-teal-500 border-teal-500">
             {t('按次计费')}
-          </Tag>
+          </Badge>
         );
       case 0:
         return (
-          <Tag color='violet' size='large'>
+          <Badge variant="outline" className="text-violet-500 border-violet-500">
             {t('按量计费')}
-          </Tag>
+          </Badge>
         );
       default:
         return t('未知');
@@ -82,23 +106,17 @@ const ModelPricing = () => {
   
   function renderAvailable(available) {
     return (
-      <Popover
-        content={
-          <div style={{ padding: 8 }}>{t('您的分组可以使用该模型')}</div>
-        }
-        position='top'
-        key={available}
-        style={{
-          backgroundColor: 'rgba(var(--semi-blue-4),1)',
-          borderColor: 'rgba(var(--semi-blue-4),1)',
-          color: 'var(--semi-color-white)',
-          borderWidth: 1,
-          borderStyle: 'solid',
-        }}
-      >
-        <IconVerify style={{ color: 'green' }}  size="large" />
-      </Popover>
-    )
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger>
+            <Check className="text-green-500 h-5 w-5" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{t('您的分组可以使用该模型')}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
   }
 
   const columns = [
@@ -117,15 +135,15 @@ const ModelPricing = () => {
       render: (text, record, index) => {
         return (
           <>
-            <Tag
-              color='green'
-              size='large'
+            <Badge
+              variant="outline"
+              className="text-green-500 border-green-500 cursor-pointer"
               onClick={() => {
                 copyText(text);
               }}
             >
               {text}
-            </Tag>
+            </Badge>
           </>
         );
       },
@@ -148,24 +166,25 @@ const ModelPricing = () => {
         
         // enable_groups is a string array
         return (
-          <Space>
+          <div className="flex flex-wrap gap-1">
             {text.map((group) => {
               if (usableGroup[group]) {
                 if (group === selectedGroup) {
                   return (
-                    <Tag
-                      color='blue'
-                      size='large'
-                      prefixIcon={<IconVerify />}
+                    <Badge
+                      key={group}
+                      className="bg-blue-500 text-white flex items-center"
                     >
+                      <Check className="mr-1 h-3 w-3" />
                       {group}
-                    </Tag>
+                    </Badge>
                   );
                 } else {
                   return (
-                    <Tag
-                      color='blue'
-                      size='large'
+                    <Badge
+                      key={group}
+                      variant="outline"
+                      className="text-blue-500 border-blue-500 cursor-pointer"
                       onClick={() => {
                         setSelectedGroup(group);
                         showInfo(t('当前查看的分组为：{{group}}，倍率为：{{ratio}}', {
@@ -175,42 +194,40 @@ const ModelPricing = () => {
                       }}
                     >
                       {group}
-                    </Tag>
+                    </Badge>
                   );
                 }
               }
             })}
-          </Space>
+          </div>
         );
       },
     },
     {
       title: () => (
-        <span style={{'display':'flex','alignItems':'center'}}>
+        <span className="flex items-center">
           {t('倍率')}
-          <Popover
-            content={
-              <div style={{ padding: 8 }}>
-                {t('倍率是为了方便换算不同价格的模型')}<br/>
-                {t('点击查看倍率说明')}
-              </div>
-            }
-            position='top'
-            style={{
-                backgroundColor: 'rgba(var(--semi-blue-4),1)',
-                borderColor: 'rgba(var(--semi-blue-4),1)',
-                color: 'var(--semi-color-white)',
-                borderWidth: 1,
-                borderStyle: 'solid',
-            }}
-          >
-            <IconHelpCircle
-              onClick={() => {
-                setModalImageUrl('/ratio.png');
-                setIsModalOpenurl(true);
-              }}
-            />
-          </Popover>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-5 w-5 ml-1"
+                  onClick={() => {
+                    setModalImageUrl('/ratio.png');
+                    setIsModalOpenurl(true);
+                  }}
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('倍率是为了方便换算不同价格的模型')}</p>
+                <p>{t('点击查看倍率说明')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </span>
       ),
       dataIndex: 'model_ratio',
@@ -219,11 +236,11 @@ const ModelPricing = () => {
         let completionRatio = parseFloat(record.completion_ratio.toFixed(3));
         content = (
           <>
-            <Text>{t('模型倍率')}：{record.quota_type === 0 ? text : t('无')}</Text>
-            <br />
-            <Text>{t('补全倍率')}：{record.quota_type === 0 ? completionRatio : t('无')}</Text>
-            <br />
-            <Text>{t('分组倍率')}：{groupRatio[selectedGroup]}</Text>
+            <div className="text-sm">
+              <p>{t('模型倍率')}：{record.quota_type === 0 ? text : t('无')}</p>
+              <p>{t('补全倍率')}：{record.quota_type === 0 ? completionRatio : t('无')}</p>
+              <p>{t('分组倍率')}：{groupRatio[selectedGroup]}</p>
+            </div>
           </>
         );
         return <div>{content}</div>;
@@ -243,14 +260,15 @@ const ModelPricing = () => {
             groupRatio[selectedGroup];
           content = (
             <>
-              <Text>{t('提示')} ${inputRatioPrice} / 1M tokens</Text>
-              <br />
-              <Text>{t('补全')} ${completionRatioPrice} / 1M tokens</Text>
+              <div className="text-sm">
+                <p>{t('提示')} ${inputRatioPrice} / 1M tokens</p>
+                <p>{t('补全')} ${completionRatioPrice} / 1M tokens</p>
+              </div>
             </>
           );
         } else {
           let price = parseFloat(text) * groupRatio[selectedGroup];
-          content = <>${t('模型价格')}：${price}</>;
+          content = <div className="text-sm">${t('模型价格')}：${price}</div>;
         }
         return <div>{content}</div>;
       },
@@ -314,10 +332,9 @@ const ModelPricing = () => {
 
   const copyText = async (text) => {
     if (await copy(text)) {
-      showSuccess('已复制：' + text);
+      showSuccess(t('已复制：') + text);
     } else {
-      // setSearchKeyword(text);
-      Modal.error({ title: '无法复制到剪贴板，请手动复制', content: text });
+      showError(t('无法复制到剪贴板'));
     }
   };
 
@@ -326,81 +343,148 @@ const ModelPricing = () => {
   }, []);
 
   return (
-    <>
-      <Layout>
-        {userState.user ? (
-          <Banner
-            type="success"
-            fullMode={false}
-            closeIcon="null"
-            description={t('您的默认分组为：{{group}}，分组倍率为：{{ratio}}', {
-              group: userState.user.group,
-              ratio: groupRatio[userState.user.group]
-            })}
-          />
-        ) : (
-          <Banner
-            type='warning'
-            fullMode={false}
-            closeIcon="null"
-            description={t('您还未登陆，显示的价格为默认分组倍率: {{ratio}}', {
-              ratio: groupRatio['default']
-            })}
-          />
-        )}
-        <br/>
-        <Banner 
-            type="info"
-            fullMode={false}
-            description={<div>{t('按量计费费用 = 分组倍率 × 模型倍率 × （提示token数 + 补全token数 × 补全倍率）/ 500000 （单位：美元）')}</div>}
-            closeIcon="null"
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">{t('模型价格')}</h2>
+        <Input
+          className="max-w-xs"
+          placeholder={t('搜索模型')}
+          onChange={handleChange}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
         />
-        <br/>
-        <Space style={{ marginBottom: 16 }}>
-          <Input
-            placeholder={t('模糊搜索模型名称')}
-            style={{ width: 200 }}
-            onCompositionStart={handleCompositionStart}
-            onCompositionEnd={handleCompositionEnd}
-            onChange={handleChange}
-            showClear
-          />
-          <Button
-            theme='light'
-            type='tertiary'
-            style={{width: 150}}
-            onClick={() => {
-              copyText(selectedRowKeys);
-            }}
-            disabled={selectedRowKeys == ""}
-          >
-            {t('复制选中模型')}
-          </Button>
-        </Space>
-        <Table
-          style={{ marginTop: 5 }}
-          columns={columns}
-          dataSource={models}
-          loading={loading}
-          pagination={{
-            formatPageText: (page) =>
-              t('第 {{start}} - {{end}} 条，共 {{total}} 条', {
-                start: page.currentStart,
-                end: page.currentEnd,
-                total: models.length
-              }),
-            pageSize: models.length,
-            showSizeChanger: false,
-          }}
-          rowSelection={rowSelection}
-        />
-        <ImagePreview
-          src={modalImageUrl}
-          visible={isModalOpenurl}
-          onVisibleChange={(visible) => setIsModalOpenurl(visible)}
-        />
-      </Layout>
-    </>
+      </div>
+      
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t('可用性')}</TableHead>
+            <TableHead>{t('模型名称')}</TableHead>
+            <TableHead>{t('计费类型')}</TableHead>
+            <TableHead>{t('可用分组')}</TableHead>
+            <TableHead className="flex items-center">
+              {t('倍率')}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-5 w-5 ml-1"
+                      onClick={() => {
+                        setModalImageUrl('/ratio.png');
+                        setIsModalOpenurl(true);
+                      }}
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('倍率是为了方便换算不同价格的模型')}</p>
+                    <p>{t('点击查看倍率说明')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </TableHead>
+            <TableHead>{t('模型价格')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {models.map((record) => (
+            <TableRow key={record.key}>
+              <TableCell>
+                {record.enable_groups.includes(selectedGroup) && renderAvailable(true)}
+              </TableCell>
+              <TableCell>
+                <Badge 
+                  variant="outline" 
+                  className="text-green-500 border-green-500 cursor-pointer"
+                  onClick={() => copyText(record.model_name)}
+                >
+                  {record.model_name}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {renderQuotaType(parseInt(record.quota_type))}
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-wrap gap-1">
+                  {record.enable_groups.map((group) => {
+                    if (usableGroup[group]) {
+                      if (group === selectedGroup) {
+                        return (
+                          <Badge 
+                            key={group}
+                            className="bg-blue-500 text-white flex items-center"
+                          >
+                            <Check className="mr-1 h-3 w-3" />
+                            {group}
+                          </Badge>
+                        );
+                      } else {
+                        return (
+                          <Badge 
+                            key={group}
+                            variant="outline" 
+                            className="text-blue-500 border-blue-500 cursor-pointer"
+                            onClick={() => {
+                              setSelectedGroup(group);
+                              showInfo(t('当前查看的分组为：{{group}}，倍率为：{{ratio}}', {
+                                group: group,
+                                ratio: groupRatio[group]
+                              }));
+                            }}
+                          >
+                            {group}
+                          </Badge>
+                        );
+                      }
+                    }
+                    return null;
+                  })}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="text-sm">
+                  <p>{t('模型倍率')}：{record.quota_type === 0 ? record.model_ratio : t('无')}</p>
+                  <p>{t('补全倍率')}：{record.quota_type === 0 ? parseFloat(record.completion_ratio.toFixed(3)) : t('无')}</p>
+                  <p>{t('分组倍率')}：{groupRatio[selectedGroup]}</p>
+                </div>
+              </TableCell>
+              <TableCell>
+                {record.quota_type === 0 ? (
+                  <div className="text-sm">
+                    <p>
+                      {t('提示')} ${record.model_ratio * 2 * groupRatio[selectedGroup]} / 1M tokens
+                    </p>
+                    <p>
+                      {t('补全')} ${record.model_ratio * record.completion_ratio * 2 * groupRatio[selectedGroup]} / 1M tokens
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-sm">
+                    <p>
+                      {t('每次')} ${record.fixed_price * groupRatio[selectedGroup]}
+                    </p>
+                  </div>
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      
+      <Dialog open={isModalOpenurl} onOpenChange={setIsModalOpenurl}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{t('倍率说明')}</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center">
+            <img src={modalImageUrl} alt="Ratio explanation" className="max-w-full h-auto" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

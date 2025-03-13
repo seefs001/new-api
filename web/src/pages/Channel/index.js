@@ -1,21 +1,18 @@
-import React from 'react';
 import ChannelsTable from '../../components/ChannelsTable';
-import { Layout } from '@douyinfe/semi-ui';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 const File = () => {
   const { t } = useTranslation();
   return (
-    <>
-      <Layout>
-        <Layout.Header>
-        <h3>{t('管理渠道')}</h3>
-      </Layout.Header>
-      <Layout.Content>
+    <div className="flex flex-col w-full h-full">
+      <div className="p-4 border-b">
+        <h3 className="text-xl font-semibold">{t('管理渠道')}</h3>
+      </div>
+      <div className="flex-grow p-4">
         <ChannelsTable />
-        </Layout.Content>
-      </Layout>
-    </>
+      </div>
+    </div>
   );
 };
 

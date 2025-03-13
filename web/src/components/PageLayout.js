@@ -1,18 +1,17 @@
-import HeaderBar from './HeaderBar.js';
-import { Layout } from '@douyinfe/semi-ui';
-import SiderBar from './SiderBar.js';
+import { API, getLogo, getSystemName, showError } from '../helpers/index.js';
+import React, { useContext, useEffect } from 'react';
+
 import App from '../App.js';
 import FooterBar from './Footer.js';
-import { ToastContainer } from 'react-toastify';
-import React, { useContext, useEffect } from 'react';
-import { StyleContext } from '../context/Style/index.js';
-import { useTranslation } from 'react-i18next';
-import { API, getLogo, getSystemName, showError } from '../helpers/index.js';
-import { setStatusData } from '../helpers/data.js';
-import { UserContext } from '../context/User/index.js';
+import HeaderBar from './HeaderBar.js';
+import SiderBar from './SiderBar.js';
 import { StatusContext } from '../context/Status/index.js';
-const { Sider, Content, Header, Footer } = Layout;
-
+import { StyleContext } from '../context/Style/index.js';
+import { ToastContainer } from 'react-toastify';
+import { UserContext } from '../context/User/index.js';
+import { cn } from '../lib/utils';
+import { setStatusData } from '../helpers/data.js';
+import { useTranslation } from 'react-i18next';
 
 const PageLayout = () => {
   const [userState, userDispatch] = useContext(UserContext);
@@ -71,76 +70,53 @@ const PageLayout = () => {
   const isSidebarCollapsed = localStorage.getItem('default_collapse_sidebar') === 'true';
 
   return (
-    <Layout style={{ 
-      height: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column',
-      overflow: styleState.isMobile ? 'visible' : 'hidden'
-    }}>
-      <Header style={{ 
-        padding: 0, 
-        height: 'auto', 
-        lineHeight: 'normal', 
-        position: styleState.isMobile ? 'sticky' : 'fixed',
-        width: '100%', 
-        top: 0, 
-        zIndex: 100,
-        boxShadow: '0 1px 6px rgba(0, 0, 0, 0.08)'
-      }}>
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* Header */}
+      <header className={cn(
+        "p-0 z-50 w-full bg-background border-b",
+        styleState.isMobile ? "sticky top-0" : "fixed top-0 w-full shadow-sm"
+      )}>
         <HeaderBar />
-      </Header>
-      <Layout style={{ 
-        marginTop: styleState.isMobile ? '0' : '56px',
-        height: styleState.isMobile ? 'auto' : 'calc(100vh - 56px)',
-        overflow: styleState.isMobile ? 'visible' : 'auto',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
+      </header>
+
+      {/* Main Content Area */}
+      <div className={cn(
+        "flex flex-grow overflow-hidden",
+        styleState.isMobile ? "" : "mt-14" // 56px header height
+      )}>
+        {/* Sidebar */}
         {styleState.showSider && (
-          <Sider style={{
-            position: 'fixed',
-            left: 0,
-            top: '56px',
-            zIndex: 99,
-            background: 'var(--semi-color-bg-1)',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-            border: 'none',
-            paddingRight: '0',
-            height: 'calc(100vh - 56px)',
-          }}>
+          <div className={cn(
+            styleState.isMobile ? "relative" : "fixed left-0 top-14 h-[calc(100vh-56px)] z-40"
+          )}>
             <SiderBar />
-          </Sider>
+          </div>
         )}
-        <Layout style={{ 
-          marginLeft: styleState.isMobile ? '0' : (styleState.showSider ? (styleState.siderCollapsed ? '60px' : '200px') : '0'),
-          transition: 'margin-left 0.3s ease',
-          flex: '1 1 auto',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <Content
-            style={{ 
-              flex: '1 0 auto',
-              overflowY: styleState.isMobile ? 'visible' : 'auto',
-              WebkitOverflowScrolling: 'touch',
-              padding: styleState.shouldInnerPadding? '24px': '0',
-              position: 'relative',
-              marginTop: styleState.isMobile ? '2px' : '0',
-            }}
-          >
+
+        {/* Content */}
+        <div className={cn(
+          "flex flex-col flex-grow transition-all duration-300",
+          styleState.isMobile ? "" : styleState.showSider ? 
+          (styleState.siderCollapsed ? "ml-16" : "ml-64") : "ml-0"
+        )}>
+          <main className={cn(
+            "flex-grow",
+            styleState.isMobile ? "overflow-visible" : "overflow-auto",
+            styleState.shouldInnerPadding ? "p-6" : "p-0",
+            "relative"
+          )}>
             <App />
-          </Content>
-          <Layout.Footer style={{ 
-            flex: '0 0 auto',
-            width: '100%'
-          }}>
+          </main>
+
+          {/* Footer */}
+          <footer className="flex-shrink-0 w-full">
             <FooterBar />
-          </Layout.Footer>
-        </Layout>
-      </Layout>
+          </footer>
+        </div>
+      </div>
       <ToastContainer />
-    </Layout>
-  )
-}
+    </div>
+  );
+};
 
 export default PageLayout;

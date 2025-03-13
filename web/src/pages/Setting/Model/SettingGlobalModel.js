@@ -1,12 +1,16 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Row, Spin } from '@douyinfe/semi-ui';
 import {
-  compareObjects,
   API,
+  compareObjects,
   showError,
   showSuccess,
-  showWarning, verifyJSON
+  showWarning
 } from '../../../helpers';
+import React, { useEffect, useState } from 'react';
+
+import { Button } from "../../../components/ui/button";
+import { Label } from "../../../components/ui/label";
+import { Loader2 } from "lucide-react";
+import { Switch } from "../../../components/ui/switch";
 import { useTranslation } from 'react-i18next';
 
 export default function SettingGlobalModel(props) {
@@ -16,7 +20,6 @@ export default function SettingGlobalModel(props) {
   const [inputs, setInputs] = useState({
     'global.pass_through_request_enabled': false,
   });
-  const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
 
   function onSubmit() {
@@ -62,37 +65,41 @@ export default function SettingGlobalModel(props) {
     }
     setInputs(currentInputs);
     setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
   }, [props.options]);
 
   return (
     <>
-      <Spin spinning={loading}>
-        <Form
-          values={inputs}
-          getFormApi={(formAPI) => (refForm.current = formAPI)}
-          style={{ marginBottom: 15 }}
-        >
-          <Form.Section text={t('全局设置')}>
-            <Row>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.Switch
-                  label={t('启用请求透传')}
-                  field={'global.pass_through_request_enabled'}
-                  onChange={(value) => setInputs({ ...inputs, 'global.pass_through_request_enabled': value })}
-                  extraText={'开启后，所有请求将直接透传给上游，不会进行任何处理（重定向和渠道适配也将失效）,请谨慎开启'}
-                />
-              </Col>
-            </Row>
+      {loading ? (
+        <div className="flex justify-center items-center py-4">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <h3 className="text-lg font-medium">{t('全局设置')}</h3>
+          
+          <div className="grid grid-cols-1 gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="global-pass-through"
+                checked={inputs['global.pass_through_request_enabled']}
+                onCheckedChange={(checked) => 
+                  setInputs({ ...inputs, 'global.pass_through_request_enabled': checked })
+                }
+              />
+              <Label htmlFor="global-pass-through">
+                {t('启用请求透传')}
+              </Label>
+            </div>
+            <p className="text-sm text-muted-foreground pl-6">
+              开启后，所有请求将直接透传给上游，不会进行任何处理（重定向和渠道适配也将失效）,请谨慎开启
+            </p>
+          </div>
 
-            <Row>
-              <Button size='default' onClick={onSubmit}>
-                {t('保存')}
-              </Button>
-            </Row>
-          </Form.Section>
-        </Form>
-      </Spin>
+          <Button onClick={onSubmit} className="mt-4">
+            {t('保存')}
+          </Button>
+        </div>
+      )}
     </>
   );
 }

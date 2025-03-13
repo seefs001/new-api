@@ -1,75 +1,86 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Popconfirm, Row, Space, Spin } from '@douyinfe/semi-ui';
 import {
-  compareObjects,
   API,
+  compareObjects,
   showError,
   showSuccess,
   showWarning,
-  verifyJSON,
+  verifyJSON
 } from '../../../helpers';
+import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import React, { useEffect, useRef, useState } from 'react';
+
+import { Button } from "../../../components/ui/button";
+import { Label } from "../../../components/ui/label";
+import { Loader2 } from "lucide-react";
+import { Textarea } from "../../../components/ui/textarea";
 import { useTranslation } from 'react-i18next';
 
 export default function ModelRatioSettings(props) {
   const [loading, setLoading] = useState(false);
-  const [inputs, setInputs] = useState({
-    ModelPrice: '',
-    ModelRatio: '',
-    CacheRatio: '',
-    CompletionRatio: '',
-  });
-  const refForm = useRef();
-  const [inputsRow, setInputsRow] = useState(inputs);
   const { t } = useTranslation();
+  const [inputs, setInputs] = useState({
+    ModelRatio: '',
+    ModelPrice: '',
+    CompletionRatio: '',
+    CacheRatio: '',
+  });
+  const [inputsRow, setInputsRow] = useState(inputs);
+  const [validationErrors, setValidationErrors] = useState({});
 
-  async function onSubmit() {
-    try {
-      await refForm.current.validate().then(() => {
-        const updateArray = compareObjects(inputs, inputsRow);
-        if (!updateArray.length) return showWarning(t('你似乎并没有修改什么'));
-        
-        const requestQueue = updateArray.map((item) => {
-          const value = typeof inputs[item.key] === 'boolean' 
-            ? String(inputs[item.key]) 
-            : inputs[item.key];
-          return API.put('/api/option/', { key: item.key, value });
-        });
-
-        setLoading(true);
-        Promise.all(requestQueue)
-          .then((res) => {
-            if (res.includes(undefined)) {
-              return showError(requestQueue.length > 1 ? t('部分保存失败，请重试') : t('保存失败'));
-            }
-            
-            for (let i = 0; i < res.length; i++) {
-              if (!res[i].data.success) {
-                return showError(res[i].data.message);
-              }
-            }
-            
-            showSuccess(t('保存成功'));
-            props.refresh();
-          })
-          .catch(error => {
-            console.error('Unexpected error:', error);
-            showError(t('保存失败，请重试'));
-          })
-          .finally(() => {
-            setLoading(false);
-          });
-      }).catch(() => {
-        showError(t('请检查输入'));
-      });
-    } catch (error) {
-      showError(t('请检查输入'));
-      console.error(error);
+  function onSubmit() {
+    // First validate all JSON fields
+    const errors = {};
+    if (!verifyJSON(inputs.ModelRatio)) {
+      errors.ModelRatio = t('不是合法的 JSON 字符串');
     }
+    if (!verifyJSON(inputs.ModelPrice)) {
+      errors.ModelPrice = t('不是合法的 JSON 字符串');
+    }
+    if (!verifyJSON(inputs.CompletionRatio)) {
+      errors.CompletionRatio = t('不是合法的 JSON 字符串');
+    }
+    if (!verifyJSON(inputs.CacheRatio)) {
+      errors.CacheRatio = t('不是合法的 JSON 字符串');
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors({});
+    
+    const updateArray = compareObjects(inputs, inputsRow);
+    if (!updateArray.length) return showWarning(t('你似乎并没有修改什么'));
+    const requestQueue = updateArray.map((item) => {
+      return API.put('/api/option/', {
+        key: item.key,
+        value: inputs[item.key],
+      });
+    });
+    setLoading(true);
+    Promise.all(requestQueue)
+      .then((res) => {
+        if (requestQueue.length === 1) {
+          if (res.includes(undefined)) return;
+        } else if (requestQueue.length > 1) {
+          if (res.includes(undefined)) return showError(t('部分保存失败，请重试'));
+        }
+        showSuccess(t('保存成功'));
+        props.refresh();
+      })
+      .catch(() => {
+        showError(t('保存失败，请重试'));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   async function resetModelRatio() {
     try {
-      let res = await API.post(`/api/option/rest_model_ratio`);
+      let res = await API.post(`/api/option/reset_model_ratio`);
       if (res.data.success) {
         showSuccess(res.data.message);
         props.refresh();
@@ -90,109 +101,140 @@ export default function ModelRatioSettings(props) {
     }
     setInputs(currentInputs);
     setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
   }, [props.options]);
-
+  
   return (
-    <Spin spinning={loading}>
-      <Form
-        values={inputs}
-        getFormApi={(formAPI) => (refForm.current = formAPI)}
-        style={{ marginBottom: 15 }}
-      >
-        <Form.Section>
-          <Row gutter={16}>
-            <Col xs={24} sm={16}>
-              <Form.TextArea
-                label={t('模型固定价格')}
-                extraText={t('一次调用消耗多少刀，优先级大于模型倍率')}
-                placeholder={t('为一个 JSON 文本，键为模型名称，值为一次调用消耗多少刀，比如 "gpt-4-gizmo-*": 0.1，一次消耗0.1刀')}
-                field={'ModelPrice'}
-                autosize={{ minRows: 6, maxRows: 12 }}
-                trigger='blur'
-                stopValidateWithError
-                rules={[
-                  {
-                    validator: (rule, value) => verifyJSON(value),
-                    message: '不是合法的 JSON 字符串'
-                  }
-                ]}
-                onChange={(value) => setInputs({ ...inputs, ModelPrice: value })}
-              />
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col xs={24} sm={16}>
-              <Form.TextArea
-                label={t('模型倍率')}
-                placeholder={t('为一个 JSON 文本，键为模型名称，值为倍率')}
-                field={'ModelRatio'}
-                autosize={{ minRows: 6, maxRows: 12 }}
-                trigger='blur'
-                stopValidateWithError
-                rules={[
-                  {
-                    validator: (rule, value) => verifyJSON(value),
-                    message: '不是合法的 JSON 字符串'
-                  }
-                ]}
-                onChange={(value) => setInputs({ ...inputs, ModelRatio: value })}
-              />
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col xs={24} sm={16}>
-              <Form.TextArea
-                label={t('提示缓存倍率')}
-                placeholder={t('为一个 JSON 文本，键为模型名称，值为倍率')}
-                field={'CacheRatio'}
-                autosize={{ minRows: 6, maxRows: 12 }}
-                trigger='blur'
-                stopValidateWithError
-                rules={[
-                  {
-                    validator: (rule, value) => verifyJSON(value),
-                    message: '不是合法的 JSON 字符串'
-                  }
-                ]}
-                onChange={(value) => setInputs({ ...inputs, CacheRatio: value })}
-              />
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col xs={24} sm={16}>
-              <Form.TextArea
-                label={t('模型补全倍率（仅对自定义模型有效）')}
-                extraText={t('仅对自定义模型有效')}
-                placeholder={t('为一个 JSON 文本，键为模型名称，值为倍率')}
-                field={'CompletionRatio'}
-                autosize={{ minRows: 6, maxRows: 12 }}
-                trigger='blur'
-                stopValidateWithError
-                rules={[
-                  {
-                    validator: (rule, value) => verifyJSON(value),
-                    message: '不是合法的 JSON 字符串'
-                  }
-                ]}
-                onChange={(value) => setInputs({ ...inputs, CompletionRatio: value })}
-              />
-            </Col>
-          </Row>
-        </Form.Section>
-      </Form>
-      <Space>
-        <Button onClick={onSubmit}>{t('保存模型倍率设置')}</Button>
-        <Popconfirm
-          title={t('确定重置模型倍率吗？')}
-          content={t('此修改将不可逆')}
-          okType={'danger'}
-          position={'top'}
-          onConfirm={resetModelRatio}
-        >
-          <Button type={'danger'}>{t('重置模型倍率')}</Button>
-        </Popconfirm>
-      </Space>
-    </Spin>
+    <>
+      {loading ? (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('模型倍率设置')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={resetModelRatio} 
+                  className="mb-4"
+                >
+                  {t('重置为默认倍率')}
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ModelRatio">{t('模型倍率')}</Label>
+                  <Textarea
+                    id="ModelRatio"
+                    value={inputs.ModelRatio}
+                    onChange={(e) => 
+                      setInputs({
+                        ...inputs,
+                        ModelRatio: e.target.value,
+                      })
+                    }
+                    placeholder={t('为一个 JSON 文本，键为模型名称，值为倍率')}
+                    rows={6}
+                    className={`font-mono resize-y ${validationErrors.ModelRatio ? "border-destructive" : ""}`}
+                  />
+                  {validationErrors.ModelRatio && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertDescription>{validationErrors.ModelRatio}</AlertDescription>
+                    </Alert>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {t('为一个 JSON 文本，键为模型名称，值为倍率')}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ModelPrice">{t('模型价格')}</Label>
+                  <Textarea
+                    id="ModelPrice"
+                    value={inputs.ModelPrice}
+                    onChange={(e) => 
+                      setInputs({
+                        ...inputs,
+                        ModelPrice: e.target.value,
+                      })
+                    }
+                    placeholder={t('为一个 JSON 文本，键为模型名称，值为价格')}
+                    rows={6}
+                    className={`font-mono resize-y ${validationErrors.ModelPrice ? "border-destructive" : ""}`}
+                  />
+                  {validationErrors.ModelPrice && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertDescription>{validationErrors.ModelPrice}</AlertDescription>
+                    </Alert>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {t('为一个 JSON 文本，键为模型名称，值为价格')}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="CacheRatio">{t('提示缓存倍率')}</Label>
+                  <Textarea
+                    id="CacheRatio"
+                    value={inputs.CacheRatio}
+                    onChange={(e) => 
+                      setInputs({
+                        ...inputs,
+                        CacheRatio: e.target.value,
+                      })
+                    }
+                    placeholder={t('为一个 JSON 文本，键为模型名称，值为倍率')}
+                    rows={6}
+                    className={`font-mono resize-y ${validationErrors.CacheRatio ? "border-destructive" : ""}`}
+                  />
+                  {validationErrors.CacheRatio && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertDescription>{validationErrors.CacheRatio}</AlertDescription>
+                    </Alert>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {t('为一个 JSON 文本，键为模型名称，值为倍率')}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="CompletionRatio">{t('模型补全倍率（仅对自定义模型有效）')}</Label>
+                  <Textarea
+                    id="CompletionRatio"
+                    value={inputs.CompletionRatio}
+                    onChange={(e) => 
+                      setInputs({
+                        ...inputs,
+                        CompletionRatio: e.target.value,
+                      })
+                    }
+                    placeholder={t('为一个 JSON 文本，键为模型名称，值为倍率')}
+                    rows={6}
+                    className={`font-mono resize-y ${validationErrors.CompletionRatio ? "border-destructive" : ""}`}
+                  />
+                  {validationErrors.CompletionRatio && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertDescription>{validationErrors.CompletionRatio}</AlertDescription>
+                    </Alert>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {t('仅对自定义模型有效')}
+                  </p>
+                </div>
+              </div>
+              
+              <Button onClick={onSubmit} className="mt-4">
+                {t('保存模型倍率设置')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </>
   );
 } 

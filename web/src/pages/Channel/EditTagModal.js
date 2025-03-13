@@ -1,7 +1,28 @@
-import React, { useState, useEffect } from 'react';
 import { API, showError, showInfo, showSuccess, showWarning, verifyJSON } from '../../helpers';
-import { SideSheet, Space, Button, Input, Typography, Spin, Modal, Select, Banner, TextArea } from '@douyinfe/semi-ui';
+import { Alert, AlertDescription } from "../../components/ui/alert";
+import React, { useEffect, useState } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "../../components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle
+} from "../../components/ui/sheet";
+
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Loader2 } from "lucide-react";
 import TextInput from '../../components/custom/TextInput.js';
+import { Textarea } from "../../components/ui/textarea";
 import { getChannelModels } from '../../components/utils.js';
 
 const MODEL_MAPPING_EXAMPLE = {
@@ -199,8 +220,7 @@ const EditTagModal = (props) => {
         localModels.push(model); // 添加到模型列表
         localModelOptions.push({
           // 添加到下拉选项
-          key: model,
-          text: model,
+          label: model,
           value: model
         });
       } else if (model) {
@@ -217,149 +237,151 @@ const EditTagModal = (props) => {
     handleInputChange('models', localModels);
   };
 
-
   return (
-    <SideSheet
-      title="编辑标签"
-      visible={visible}
-      onCancel={handleClose}
-      footer={
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Space>
-            <Button onClick={handleClose}>取消</Button>
-            <Button type="primary" onClick={handleSave} loading={loading}>保存</Button>
-          </Space>
-        </div>
-      }
-    >
-      <div style={{ marginTop: 10 }}>
-        <Banner
-          type={'warning'}
-          description={
-            <>
+    <Sheet open={visible} onOpenChange={handleClose}>
+      <SheetContent className="sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>编辑标签</SheetTitle>
+        </SheetHeader>
+        
+        <div className="mt-6 space-y-6">
+          <Alert variant="warning">
+            <AlertDescription>
               所有编辑均为覆盖操作，留空则不更改
-            </>
-          }
-        ></Banner>
-      </div>
-      <Spin spinning={loading}>
-        <TextInput
-          label="标签名，留空则解散标签"
-          name="newTag"
-          value={inputs.new_tag}
-          onChange={(value) => setInputs({ ...inputs, new_tag: value })}
-          placeholder="请输入新标签"
-        />
-        <div style={{ marginTop: 10 }}>
-          <Typography.Text strong>模型，留空则不更改：</Typography.Text>
+            </AlertDescription>
+          </Alert>
+          
+          {loading && (
+            <div className="flex justify-center items-center w-full py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          )}
+          
+          <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+            <TextInput
+              label="标签名，留空则解散标签"
+              name="newTag"
+              value={inputs.new_tag}
+              onChange={(value) => setInputs({ ...inputs, new_tag: value })}
+              placeholder="请输入新标签"
+            />
+            
+            <div className="space-y-2 mt-4">
+              <Label>模型，留空则不更改：</Label>
+              <div className="grid gap-2">
+                <div className="flex items-center space-x-2">
+                  <Input
+                    placeholder="输入自定义模型名称"
+                    value={customModel}
+                    onChange={(e) => setCustomModel(e.target.value.trim())}
+                    className="flex-1"
+                  />
+                  <Button onClick={addCustomModels} type="button">
+                    填入
+                  </Button>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {inputs.models.map(model => (
+                    <div key={model} className="flex items-center bg-secondary text-secondary-foreground px-2 py-1 rounded text-sm">
+                      {model}
+                      <button 
+                        className="ml-1 text-secondary-foreground/70 hover:text-secondary-foreground"
+                        onClick={() => {
+                          const newModels = inputs.models.filter(m => m !== model);
+                          handleInputChange('models', newModels);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2 mt-4">
+              <Label>分组，留空则不更改：</Label>
+              <div className="flex flex-wrap gap-2">
+                {groupOptions.map(group => (
+                  <div 
+                    key={group.value}
+                    className={`cursor-pointer px-3 py-1 rounded text-sm ${
+                      inputs.groups.includes(group.value) 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-secondary text-secondary-foreground'
+                    }`}
+                    onClick={() => {
+                      const newGroups = inputs.groups.includes(group.value)
+                        ? inputs.groups.filter(g => g !== group.value)
+                        : [...inputs.groups, group.value];
+                      handleInputChange('groups', newGroups);
+                    }}
+                  >
+                    {group.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="space-y-2 mt-4">
+              <Label>模型重定向：</Label>
+              <Textarea
+                placeholder="此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称，留空则不更改"
+                value={inputs.model_mapping || ""}
+                onChange={(e) => handleInputChange('model_mapping', e.target.value)}
+                rows={4}
+              />
+              <div className="flex gap-2">
+                <Button 
+                  variant="link" 
+                  className="px-0 h-auto" 
+                  onClick={() => {
+                    handleInputChange(
+                      'model_mapping',
+                      JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)
+                    );
+                  }}
+                >
+                  填入模板
+                </Button>
+                <Button 
+                  variant="link" 
+                  className="px-0 h-auto" 
+                  onClick={() => {
+                    handleInputChange(
+                      'model_mapping',
+                      JSON.stringify({}, null, 2)
+                    );
+                  }}
+                >
+                  清空重定向
+                </Button>
+                <Button 
+                  variant="link" 
+                  className="px-0 h-auto" 
+                  onClick={() => {
+                    handleInputChange('model_mapping', "");
+                  }}
+                >
+                  不更改
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
-        <Select
-          placeholder={'请选择该渠道所支持的模型，留空则不更改'}
-          name="models"
-          required
-          multiple
-          selection
-          filter
-          searchPosition='dropdown'
-          onChange={(value) => {
-            handleInputChange('models', value);
-          }}
-          value={inputs.models}
-          autoComplete="new-password"
-          optionList={modelOptions}
-        />
-        <Input
-          addonAfter={
-            <Button type="primary" onClick={addCustomModels}>
-              填入
-            </Button>
-          }
-          placeholder="输入自定义模型名称"
-          value={customModel}
-          onChange={(value) => {
-            setCustomModel(value.trim());
-          }}
-        />
-        <div style={{ marginTop: 10 }}>
-          <Typography.Text strong>分组，留空则不更改：</Typography.Text>
-        </div>
-        <Select
-          placeholder={'请选择可以使用该渠道的分组，留空则不更改'}
-          name="groups"
-          required
-          multiple
-          selection
-          allowAdditions
-          additionLabel={'请在系统设置页面编辑分组倍率以添加新的分组：'}
-          onChange={(value) => {
-            handleInputChange('groups', value);
-          }}
-          value={inputs.groups}
-          autoComplete="new-password"
-          optionList={groupOptions}
-        />
-        <div style={{ marginTop: 10 }}>
-          <Typography.Text strong>模型重定向：</Typography.Text>
-        </div>
-        <TextArea
-          placeholder={`此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称，留空则不更改`}
-          name="model_mapping"
-          onChange={(value) => {
-            handleInputChange('model_mapping', value);
-          }}
-          autosize
-          value={inputs.model_mapping}
-          autoComplete="new-password"
-        />
-        <Space>
-          <Typography.Text
-            style={{
-              color: 'rgba(var(--semi-blue-5), 1)',
-              userSelect: 'none',
-              cursor: 'pointer'
-            }}
-            onClick={() => {
-              handleInputChange(
-                'model_mapping',
-                JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)
-              );
-            }}
-          >
-            填入模板
-          </Typography.Text>
-          <Typography.Text
-            style={{
-              color: 'rgba(var(--semi-blue-5), 1)',
-              userSelect: 'none',
-              cursor: 'pointer'
-            }}
-            onClick={() => {
-              handleInputChange(
-                'model_mapping',
-                JSON.stringify({}, null, 2)
-              );
-            }}
-          >
-            清空重定向
-          </Typography.Text>
-          <Typography.Text
-            style={{
-              color: 'rgba(var(--semi-blue-5), 1)',
-              userSelect: 'none',
-              cursor: 'pointer'
-            }}
-            onClick={() => {
-              handleInputChange(
-                'model_mapping',
-                ""
-              );
-            }}
-          >
-            不更改
-          </Typography.Text>
-        </Space>
-      </Spin>
-    </SideSheet>
+        
+        <SheetFooter className="pt-4">
+          <Button variant="outline" onClick={handleClose}>
+            取消
+          </Button>
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            保存
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 };
 

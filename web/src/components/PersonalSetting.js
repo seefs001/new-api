@@ -1,5 +1,3 @@
-import React, {useContext, useEffect, useState} from 'react';
-import {useNavigate} from 'react-router-dom';
 import {
     API,
     copy,
@@ -8,36 +6,96 @@ import {
     showInfo,
     showSuccess,
 } from '../helpers';
-import Turnstile from 'react-turnstile';
-import {UserContext} from '../context/User';
-import {onGitHubOAuthClicked, onOIDCClicked, onLinuxDOOAuthClicked} from './utils';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import {
-    Avatar,
-    Banner,
-    Button,
-    Card,
-    Descriptions,
-    Image,
-    Input,
-    InputNumber,
-    Layout,
-    Modal,
-    Space,
-    Tag,
-    Typography,
-    Collapsible,
-    Select,
-    Radio,
-    RadioGroup,
-    AutoComplete,
-} from '@douyinfe/semi-ui';
+    AlertCircle,
+    ChevronDown,
+    Clipboard,
+    Copy,
+    ImageIcon,
+    Minus,
+    Plus
+} from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "./ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
+} from './ui/collapsible';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "./ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from './ui/form';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import React, {useContext, useEffect, useState} from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import {
+    Table,
+    TableBody,
+    TableCaption,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
+} from './ui/table';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from './ui/tabs';
 import {
     getQuotaPerUnit,
     renderQuota,
     renderQuotaWithPrompt,
     stringToColor,
 } from '../helpers/render';
+import {onGitHubOAuthClicked, onLinuxDOOAuthClicked, onOIDCClicked} from './utils';
+
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
+import { Input } from './ui/input';
+import { Label } from "./ui/label";
+import { Separator } from './ui/separator';
 import TelegramLoginButton from 'react-telegram-login';
+import Turnstile from 'react-turnstile';
+import { Typography } from './ui/typography';
+import {UserContext} from '../context/User';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 const PersonalSetting = () => {
@@ -58,6 +116,8 @@ const PersonalSetting = () => {
     const [showWeChatBindModal, setShowWeChatBindModal] = useState(false);
     const [showEmailBindModal, setShowEmailBindModal] = useState(false);
     const [showAccountDeleteModal, setShowAccountDeleteModal] = useState(false);
+    const [showCopyErrorDialog, setShowCopyErrorDialog] = useState(false);
+    const [copyErrorText, setCopyErrorText] = useState('');
     const [turnstileEnabled, setTurnstileEnabled] = useState(false);
     const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
     const [turnstileToken, setTurnstileToken] = useState('');
@@ -83,6 +143,44 @@ const PersonalSetting = () => {
         notificationEmail: ''
     });
     const [showWebhookDocs, setShowWebhookDocs] = useState(false);
+    const [activeTab, setActiveTab] = useState('profile');
+    const [affiliateEnabled, setAffiliateEnabled] = useState(false);
+    const [editorHeight, setEditorHeight] = useState('300px');
+    const [quota, setQuota] = useState(0);
+    const [submitEnabled, setSubmitEnabled] = useState(false);
+
+    const profileForm = useForm({
+        defaultValues: {
+            username: '',
+            display_name: '',
+            email: '',
+            wechat_id: '',
+            phone: '',
+            github_id: '',
+            telegram_id: '',
+            notice: '',
+        }
+    });
+
+    const passwordForm = useForm({
+        defaultValues: {
+            old_password: '',
+            new_password: '',
+            confirm_password: '',
+        }
+    });
+
+    const optionsForm = useForm({
+        defaultValues: {
+            openai_provider: '',
+        }
+    });
+
+    const affiliateForm = useForm({
+        defaultValues: {
+            affiliate_code: '',
+        }
+    });
 
     useEffect(() => {
         let status = localStorage.getItem('status');
@@ -319,12 +417,16 @@ const PersonalSetting = () => {
         setOpenTransfer(false);
     };
 
+    const showErrorDialog = (title, content) => {
+        setCopyErrorText(content);
+        setShowCopyErrorDialog(true);
+    };
+
     const copyText = async (text) => {
         if (await copy(text)) {
-            showSuccess(t('已复制：') + text);
+            showSuccess(t('已复制到剪贴板！'));
         } else {
-            // setSearchKeyword(text);
-            Modal.error({title: t('无法复制到剪贴板，请手动复制'), content: text});
+            showErrorDialog(t('无法复制到剪贴板，请手动复制'), text);
         }
     };
 
@@ -356,679 +458,600 @@ const PersonalSetting = () => {
         }
     };
 
+    const getOptions = async () => {
+        let res = await API.get('/api/user/option');
+        const { success, message, data } = res.data;
+        if (success) {
+            if (data.openai_provider) {
+                optionsForm.setValue('openai_provider', data.openai_provider);
+            }
+        } else {
+            showError(message);
+        }
+    };
+
+    const loadUserInfo = async () => {
+        try {
+            let res = await API.get('/api/user/self');
+            const { success, message, data } = res.data;
+            if (success) {
+                if (data) {
+                    userDispatch({type: 'login', payload: data});
+                    setAffiliateEnabled(data.affiliate_enabled);
+                    profileForm.setValue('username', data.username || '');
+                    profileForm.setValue('display_name', data.display_name || '');
+                    profileForm.setValue('email', data.email || '');
+                    profileForm.setValue('wechat_id', data.wechat_id || '');
+                    profileForm.setValue('telegram_id', data.telegram_id || '');
+                    profileForm.setValue('github_id', data.github_id || '');
+                    profileForm.setValue('phone', data.phone || '');
+                    profileForm.setValue('notice', data.notice || '');
+                    affiliateForm.setValue('affiliate_code', data.affiliate_code || '');
+                    setQuota(data.quota);
+                }
+            } else {
+                showError(message);
+            }
+        } catch (error) {
+            showError(error.message);
+        }
+    };
+
+    const onUpdateProfile = async (values) => {
+        if (loading) return;
+        setLoading(true);
+        try {
+            const res = await API.put('/api/user/self', values);
+            const { success, message } = res.data;
+            if (success) {
+                showSuccess('个人信息更新成功！');
+                await loadUserInfo();
+            } else {
+                showError(message);
+            }
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const onUpdatePassword = async (values) => {
+        if (loading) return;
+        if (values.new_password !== values.confirm_password) {
+            showError('两次输入的密码不一致！');
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await API.put('/api/user/self/password', {
+                password: values.old_password,
+                new_password: values.new_password,
+            });
+            const { success, message } = res.data;
+            if (success) {
+                showSuccess('密码更新成功！');
+                passwordForm.reset({
+                    old_password: '',
+                    new_password: '',
+                    confirm_password: '',
+                });
+            } else {
+                showError(message);
+            }
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const onUpdateOptions = async (values) => {
+        if (loading) return;
+        setLoading(true);
+        try {
+            const res = await API.put('/api/user/option', values);
+            const { success, message } = res.data;
+            if (success) {
+                showSuccess('偏好设置更新成功！');
+            } else {
+                showError(message);
+            }
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const copyAffiliateCode = () => {
+        copy(userState.user.affiliate_code);
+        showSuccess('推广码已复制到剪贴板！');
+    };
+
+    const copyAffiliateUrl = () => {
+        const url = `${window.location.origin}/register?code=${userState.user.affiliate_code}`;
+        copy(url);
+        showSuccess('推广链接已复制到剪贴板！');
+    };
+
     return (
+        <div className="container mx-auto py-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="profile">{t('个人信息')}</TabsTrigger>
+                    <TabsTrigger value="password">{t('修改密码')}</TabsTrigger>
+                    <TabsTrigger value="options">{t('偏好设置')}</TabsTrigger>
+                    {affiliateEnabled && (
+                        <TabsTrigger value="affiliate">{t('推广计划')}</TabsTrigger>
+                    )}
+                </TabsList>
 
-        <div>
-            <Layout>
-                <Layout.Content>
-                    <Modal
-                        title={t('请输入要划转的数量')}
-                        visible={openTransfer}
-                        onOk={transfer}
-                        onCancel={handleCancel}
-                        maskClosable={false}
-                        size={'small'}
-                        centered={true}
-                    >
-                        <div style={{marginTop: 20}}>
-                            <Typography.Text>{t('可用额度')}{renderQuotaWithPrompt(userState?.user?.aff_quota)}</Typography.Text>
-                            <Input
-                                style={{marginTop: 5}}
-                                value={userState?.user?.aff_quota}
-                                disabled={true}
-                            ></Input>
-                        </div>
-                        <div style={{marginTop: 20}}>
-                            <Typography.Text>
-                                {t('划转额度')}{renderQuotaWithPrompt(transferAmount)} {t('最低') + renderQuota(getQuotaPerUnit())}
-                            </Typography.Text>
-                            <div>
-                                <InputNumber
-                                    min={0}
-                                    style={{marginTop: 5}}
-                                    value={transferAmount}
-                                    onChange={(value) => setTransferAmount(value)}
-                                    disabled={false}
-                                ></InputNumber>
-                            </div>
-                        </div>
-                    </Modal>
-                    <div>
-                        <Card
-                            title={
-                                <Card.Meta
-                                    avatar={
-                                        <Avatar
-                                            size='default'
-                                            color={stringToColor(getUsername())}
-                                            style={{marginRight: 4}}
-                                        >
-                                            {typeof getUsername() === 'string' &&
-                                                getUsername().slice(0, 1)}
-                                        </Avatar>
-                                    }
-                                    title={<Typography.Text>{getUsername()}</Typography.Text>}
-                                    description={
-                                        isRoot() ? (
-                                            <Tag color='red'>{t('管理员')}</Tag>
-                                        ) : (
-                                            <Tag color='blue'>{t('普通用户')}</Tag>
-                                        )
-                                    }
-                                ></Card.Meta>
-                            }
-                            headerExtraContent={
-                                <>
-                                    <Space vertical align='start'>
-                                        <Tag color='green'>{'ID: ' + userState?.user?.id}</Tag>
-                                        <Tag color='blue'>{userState?.user?.group}</Tag>
-                                    </Space>
-                                </>
-                            }
-                            footer={
-                            <>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <Typography.Title heading={6}>{t('可用模型')}</Typography.Title>
-                                </div>
-                                <div style={{marginTop: 10}}>
-                                    {models.length <= MODELS_DISPLAY_COUNT ? (
-                                        <Space wrap>
-                                            {models.map((model) => (
-                                                <Tag
-                                                    key={model}
-                                                    color='cyan'
-                                                    onClick={() => {
-                                                        copyText(model);
-                                                    }}
-                                                >
-                                                    {model}
-                                                </Tag>
-                                            ))}
-                                        </Space>
-                                    ) : (
-                                        <>
-                                            <Collapsible isOpen={isModelsExpanded}>
-                                                <Space wrap>
-                                                    {models.map((model) => (
-                                                        <Tag
-                                                            key={model}
-                                                            color='cyan'
-                                                            onClick={() => {
-                                                                copyText(model);
-                                                            }}
-                                                        >
-                                                            {model}
-                                                        </Tag>
-                                                    ))}
-                                                    <Tag 
-                                                        color='blue' 
-                                                        type="light"
-                                                        style={{ cursor: 'pointer' }}
-                                                        onClick={() => setIsModelsExpanded(false)}
-                                                    >
-                                                        {t('收起')}
-                                                    </Tag>
-                                                </Space>
-                                            </Collapsible>
-                                            {!isModelsExpanded && (
-                                                <Space wrap>
-                                                    {models.slice(0, MODELS_DISPLAY_COUNT).map((model) => (
-                                                        <Tag
-                                                            key={model}
-                                                            color='cyan'
-                                                            onClick={() => {
-                                                                copyText(model);
-                                                            }}
-                                                        >
-                                                            {model}
-                                                        </Tag>
-                                                    ))}
-                                                    <Tag 
-                                                        color='blue'
-                                                        type="light"
-                                                        style={{ cursor: 'pointer' }}
-                                                        onClick={() => setIsModelsExpanded(true)}
-                                                    >
-                                                        {t('更多')} {models.length - MODELS_DISPLAY_COUNT} {t('个模型')}
-                                                    </Tag>
-                                                </Space>
+                <TabsContent value="profile" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>{t('个人信息')}</CardTitle>
+                            <CardDescription>
+                                {t('在这里修改您的个人信息')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Form {...profileForm}>
+                                <form onSubmit={profileForm.handleSubmit(onUpdateProfile)} className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={profileForm.control}
+                                            name="username"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{t('用户名')}</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} disabled />
+                                                    </FormControl>
+                                                    <FormDescription>
+                                                        {t('用户名不可修改')}
+                                                    </FormDescription>
+                                                </FormItem>
                                             )}
-                                        </>
-                                    )}
-                                </div>
-                            </>
-
-                            }
-                        >
-                            <Descriptions row>
-                                <Descriptions.Item itemKey={t('当前余额')}>
-                                    {renderQuota(userState?.user?.quota)}
-                                </Descriptions.Item>
-                                <Descriptions.Item itemKey={t('历史消耗')}>
-                                    {renderQuota(userState?.user?.used_quota)}
-                                </Descriptions.Item>
-                                <Descriptions.Item itemKey={t('请求次数')}>
-                                    {userState.user?.request_count}
-                                </Descriptions.Item>
-                            </Descriptions>
-                        </Card>
-                        <Card
-                            style={{marginTop: 10}}
-                            footer={
-                                <div>
-                                    <Typography.Text>{t('邀请链接')}</Typography.Text>
-                                    <Input
-                                        style={{marginTop: 10}}
-                                        value={affLink}
-                                        onClick={handleAffLinkClick}
-                                        readOnly
-                                    />
-                                </div>
-                            }
-                        >
-                            <Typography.Title heading={6}>{t('邀请信息')}</Typography.Title>
-                            <div style={{marginTop: 10}}>
-                                <Descriptions row>
-                                    <Descriptions.Item itemKey={t('待使用收益')}>
-                                        <span style={{color: 'rgba(var(--semi-red-5), 1)'}}>
-                                            {renderQuota(userState?.user?.aff_quota)}
-                                        </span>
-                                        <Button
-                                            type={'secondary'}
-                                            onClick={() => setOpenTransfer(true)}
-                                            size={'small'}
-                                            style={{marginLeft: 10}}
-                                        >
-                                            {t('划转')}
-                                        </Button>
-                                    </Descriptions.Item>
-                                    <Descriptions.Item itemKey={t('总收益')}>
-                                        {renderQuota(userState?.user?.aff_history_quota)}
-                                    </Descriptions.Item>
-                                    <Descriptions.Item itemKey={t('邀请人数')}>
-                                        {userState?.user?.aff_count}
-                                    </Descriptions.Item>
-                                </Descriptions>
-                            </div>
-                        </Card>
-                        <Card style={{marginTop: 10}}>
-                            <Typography.Title heading={6}>{t('个人信息')}</Typography.Title>
-                            <div style={{marginTop: 20}}>
-                                <Typography.Text strong>{t('邮箱')}</Typography.Text>
-                                <div
-                                    style={{display: 'flex', justifyContent: 'space-between'}}
-                                >
-                                    <div>
-                                        <Input
-                                            value={
-                                                userState.user && userState.user.email !== ''
-                                                    ? userState.user.email
-                                                    : t('未绑定')
-                                            }
-                                            readonly={true}
-                                        ></Input>
-                                    </div>
-                                    <div>
-                                        <Button
-                                            onClick={() => {
-                                                setShowEmailBindModal(true);
-                                            }}
-                                        >
-                                            {userState.user && userState.user.email !== ''
-                                                ? t('修改绑定')
-                                                : t('绑定邮箱')}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div style={{marginTop: 10}}>
-                                <Typography.Text strong>{t('微信')}</Typography.Text>
-                                <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                                    <div>
-                                        <Input
-                                            value={
-                                                userState.user && userState.user.wechat_id !== ''
-                                                    ? t('已绑定')
-                                                    : t('未绑定')
-                                            }
-                                            readonly={true}
-                                        ></Input>
-                                    </div>
-                                    <div>
-                                        <Button
-                                            disabled={!status.wechat_login}
-                                            onClick={() => {
-                                                setShowWeChatBindModal(true);
-                                            }}
-                                        >
-                                            {userState.user && userState.user.wechat_id !== ''
-                                                ? t('修改绑定')
-                                                : status.wechat_login 
-                                                    ? t('绑定') 
-                                                    : t('未启用')}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div style={{marginTop: 10}}>
-                                <Typography.Text strong>{t('GitHub')}</Typography.Text>
-                                <div
-                                    style={{display: 'flex', justifyContent: 'space-between'}}
-                                >
-                                    <div>
-                                        <Input
-                                            value={
-                                                userState.user && userState.user.github_id !== ''
-                                                    ? userState.user.github_id
-                                                    : t('未绑定')
-                                            }
-                                            readonly={true}
-                                        ></Input>
-                                    </div>
-                                    <div>
-                                        <Button
-                                            onClick={() => {
-                                                onGitHubOAuthClicked(status.github_client_id);
-                                            }}
-                                            disabled={
-                                                (userState.user && userState.user.github_id !== '') ||
-                                                !status.github_oauth
-                                            }
-                                        >
-                                            {status.github_oauth ? t('绑定') : t('未启用')}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div style={{marginTop: 10}}>
-                                <Typography.Text strong>{t('OIDC')}</Typography.Text>
-                                <div
-                                    style={{display: 'flex', justifyContent: 'space-between'}}
-                                >
-                                    <div>
-                                        <Input
-                                            value={
-                                                userState.user && userState.user.oidc_id !== ''
-                                                    ? userState.user.oidc_id
-                                                    : t('未绑定')
-                                            }
-                                            readonly={true}
-                                        ></Input>
-                                    </div>
-                                    <div>
-                                        <Button
-                                            onClick={() => {
-                                                onOIDCClicked(status.oidc_authorization_endpoint, status.oidc_client_id);
-                                            }}
-                                            disabled={
-                                                (userState.user && userState.user.oidc_id !== '') ||
-                                                !status.oidc_enabled
-                                            }
-                                        >
-                                            {status.oidc_enabled ? t('绑定') : t('未启用')}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div style={{marginTop: 10}}>
-                                <Typography.Text strong>{t('Telegram')}</Typography.Text>
-                                <div
-                                    style={{display: 'flex', justifyContent: 'space-between'}}
-                                >
-                                    <div>
-                                        <Input
-                                            value={
-                                                userState.user && userState.user.telegram_id !== ''
-                                                    ? userState.user.telegram_id
-                                                    : t('未绑定')
-                                            }
-                                            readonly={true}
-                                        ></Input>
-                                    </div>
-                                    <div>
-                                        {status.telegram_oauth ? (
-                                            userState.user.telegram_id !== '' ? (
-                                                <Button disabled={true}>{t('已绑定')}</Button>
-                                            ) : (
-                                                <TelegramLoginButton
-                                                    dataAuthUrl='/api/oauth/telegram/bind'
-                                                    botName={status.telegram_bot_name}
-                                                />
-                                            )
-                                        ) : (
-                                            <Button disabled={true}>{t('未启用')}</Button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            <div style={{marginTop: 10}}>
-                                <Typography.Text strong>{t('LinuxDO')}</Typography.Text>
-                                <div
-                                    style={{display: 'flex', justifyContent: 'space-between'}}
-                                >
-                                    <div>
-                                        <Input
-                                            value={
-                                                userState.user && userState.user.linux_do_id !== ''
-                                                    ? userState.user.linux_do_id
-                                                    : t('未绑定')
-                                            }
-                                            readonly={true}
-                                        ></Input>
-                                    </div>
-                                    <div>
-                                        <Button
-                                            onClick={() => {
-                                                onLinuxDOOAuthClicked(status.linuxdo_client_id);
-                                            }}
-                                            disabled={
-                                                (userState.user && userState.user.linux_do_id !== '') ||
-                                                !status.linuxdo_oauth
-                                            }
-                                        >
-                                            {status.linuxdo_oauth ? t('绑定') : t('未启用')}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div style={{marginTop: 10}}>
-                                <Space>
-                                    <Button onClick={generateAccessToken}>
-                                        {t('生成系统访问令牌')}
-                                    </Button>
-                                    <Button
-                                        onClick={() => {
-                                            setShowChangePasswordModal(true);
-                                        }}
-                                    >
-                                        {t('修改密码')}
-                                    </Button>
-                                    <Button
-                                        type={'danger'}
-                                        onClick={() => {
-                                            setShowAccountDeleteModal(true);
-                                        }}
-                                    >
-                                        {t('删除个人账户')}
-                                    </Button>
-                                </Space>
-
-                                {systemToken && (
-                                    <Input
-                                        readOnly
-                                        value={systemToken}
-                                        onClick={handleSystemTokenClick}
-                                        style={{marginTop: '10px'}}
-                                    />
-                                )}
-                                <Modal
-                                    onCancel={() => setShowWeChatBindModal(false)}
-                                    visible={showWeChatBindModal}
-                                    size={'small'}
-                                >
-                                    <Image src={status.wechat_qrcode}/>
-                                    <div style={{textAlign: 'center'}}>
-                                        <p>
-                                            微信扫码关注公众号，输入「验证码」获取验证码（三分钟内有效）
-                                        </p>
-                                    </div>
-                                    <Input
-                                        placeholder='验证码'
-                                        name='wechat_verification_code'
-                                        value={inputs.wechat_verification_code}
-                                        onChange={(v) =>
-                                            handleInputChange('wechat_verification_code', v)
-                                        }
-                                    />
-                                    <Button color='' fluid size='large' onClick={bindWeChat}>
-                                        {t('绑定')}
-                                    </Button>
-                                </Modal>
-                            </div>
-                        </Card>
-                        <Card style={{marginTop: 10}}>
-                            <Typography.Title heading={6}>{t('通知设置')}</Typography.Title>
-                            <div style={{marginTop: 20}}>
-                                <Typography.Text strong>{t('通知方式')}</Typography.Text>
-                                <div style={{marginTop: 10}}>
-                                    <RadioGroup
-                                        value={notificationSettings.warningType}
-                                        onChange={value => handleNotificationSettingChange('warningType', value)}
-                                    >
-                                        <Radio value="email">{t('邮件通知')}</Radio>
-                                        <Radio value="webhook">{t('Webhook通知')}</Radio>
-                                    </RadioGroup>
-                                </div>
-                            </div>
-                            {notificationSettings.warningType === 'webhook' && (
-                                <>
-                                    <div style={{marginTop: 20}}>
-                                        <Typography.Text strong>{t('Webhook地址')}</Typography.Text>
-                                        <div style={{marginTop: 10}}>
-                                            <Input
-                                                value={notificationSettings.webhookUrl}
-                                                onChange={val => handleNotificationSettingChange('webhookUrl', val)}
-                                                placeholder={t('请输入Webhook地址，例如: https://example.com/webhook')}
-                                            />
-                                            <Typography.Text type="secondary" style={{marginTop: 8, display: 'block'}}>
-                                                {t('只支持https，系统将以 POST 方式发送通知，请确保地址可以接收 POST 请求')}
-                                            </Typography.Text>
-                                            <Typography.Text type="secondary" style={{marginTop: 8, display: 'block'}}>
-                                                <div style={{cursor: 'pointer'}} onClick={() => setShowWebhookDocs(!showWebhookDocs)}>
-                                                    {t('Webhook请求结构')} {showWebhookDocs ? '▼' : '▶'}
-                                                </div>
-                                                <Collapsible isOpen={showWebhookDocs}>
-                                                    <pre style={{marginTop: 4, background: 'var(--semi-color-fill-0)', padding: 8, borderRadius: 4}}>
-{`{
-    "type": "quota_exceed",      // 通知类型
-    "title": "标题",             // 通知标题
-    "content": "通知内容",       // 通知内容，支持 {{value}} 变量占位符
-    "values": ["值1", "值2"],    // 按顺序替换content中的 {{value}} 占位符
-    "timestamp": 1739950503      // 时间戳
-}
-
-示例：
-{
-    "type": "quota_exceed",
-    "title": "额度预警通知",
-    "content": "您的额度即将用尽，当前剩余额度为 {{value}}",
-    "values": ["$0.99"],
-    "timestamp": 1739950503
-}`}
-                                                    </pre>
-                                                </Collapsible>
-                                            </Typography.Text>
-                                        </div>
-                                    </div>
-                                    <div style={{marginTop: 20}}>
-                                        <Typography.Text strong>{t('接口凭证（可选）')}</Typography.Text>
-                                        <div style={{marginTop: 10}}>
-                                            <Input
-                                                value={notificationSettings.webhookSecret}
-                                                onChange={val => handleNotificationSettingChange('webhookSecret', val)}
-                                                placeholder={t('请输入密钥')}
-                                            />
-                                            <Typography.Text type="secondary" style={{marginTop: 8, display: 'block'}}>
-                                                {t('密钥将以 Bearer 方式添加到请求头中，用于验证webhook请求的合法性')}
-                                            </Typography.Text>
-                                            <Typography.Text type="secondary" style={{marginTop: 4, display: 'block'}}>
-                                                {t('Authorization: Bearer your-secret-key')}
-                                            </Typography.Text>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                            {notificationSettings.warningType === 'email' && (
-                                <div style={{marginTop: 20}}>
-                                    <Typography.Text strong>{t('通知邮箱')}</Typography.Text>
-                                    <div style={{marginTop: 10}}>
-                                        <Input
-                                            value={notificationSettings.notificationEmail}
-                                            onChange={val => handleNotificationSettingChange('notificationEmail', val)}
-                                            placeholder={t('留空则使用账号绑定的邮箱')}
                                         />
-                                        <Typography.Text type="secondary" style={{marginTop: 8, display: 'block'}}>
-                                            {t('设置用于接收额度预警的邮箱地址，不填则使用账号绑定的邮箱')}
-                                        </Typography.Text>
+                                        <FormField
+                                            control={profileForm.control}
+                                            name="display_name"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{t('显示名称')}</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} />
+                                                    </FormControl>
+                                                    <FormDescription>
+                                                        {t('用于展示的名称')}
+                                                    </FormDescription>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={profileForm.control}
+                                            name="email"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{t('电子邮件')}</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={profileForm.control}
+                                            name="wechat_id"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{t('微信号')}</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={profileForm.control}
+                                            name="telegram_id"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{t('Telegram')}</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={profileForm.control}
+                                            name="github_id"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{t('GitHub ID')}</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={profileForm.control}
+                                            name="phone"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{t('手机号')}</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <div className="col-span-1 md:col-span-2">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Label>{t('剩余额度')}</Label>
+                                                <Badge variant="outline" className="text-sm">{renderQuota(quota)}</Badge>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Button type="submit" disabled={loading}>
+                                        {loading ? t('保存中...') : t('保存修改')}
+                                    </Button>
+                                </form>
+                            </Form>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="password" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>{t('修改密码')}</CardTitle>
+                            <CardDescription>
+                                {t('在这里修改您的账号密码')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Form {...passwordForm}>
+                                <form onSubmit={passwordForm.handleSubmit(onUpdatePassword)} className="space-y-4">
+                                    <FormField
+                                        control={passwordForm.control}
+                                        name="old_password"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t('当前密码')}</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} type="password" />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={passwordForm.control}
+                                        name="new_password"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t('新密码')}</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} type="password" />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={passwordForm.control}
+                                        name="confirm_password"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t('确认新密码')}</FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} type="password" />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <Button type="submit" disabled={loading}>
+                                        {loading ? t('更新中...') : t('更新密码')}
+                                    </Button>
+                                </form>
+                            </Form>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="options" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>{t('偏好设置')}</CardTitle>
+                            <CardDescription>
+                                {t('在这里设置您的使用偏好')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Form {...optionsForm}>
+                                <form onSubmit={optionsForm.handleSubmit(onUpdateOptions)} className="space-y-4">
+                                    <FormField
+                                        control={optionsForm.control}
+                                        name="openai_provider"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t('OpenAI 接口提供商')}</FormLabel>
+                                                <Select 
+                                                    onValueChange={field.onChange} 
+                                                    defaultValue={field.value}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder={t('请选择提供商')} />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="">默认</SelectItem>
+                                                        <SelectItem value="anthropic">Anthropic</SelectItem>
+                                                        <SelectItem value="azure">Azure</SelectItem>
+                                                        <SelectItem value="baidu">Baidu</SelectItem>
+                                                        <SelectItem value="claude">Claude</SelectItem>
+                                                        <SelectItem value="cloudflare">Cloudflare</SelectItem>
+                                                        <SelectItem value="groq">Groq</SelectItem>
+                                                        <SelectItem value="google">Google</SelectItem>
+                                                        <SelectItem value="mistral">Mistral</SelectItem>
+                                                        <SelectItem value="moonshot">Moonshot</SelectItem>
+                                                        <SelectItem value="openai">OpenAI</SelectItem>
+                                                        <SelectItem value="openrouter">OpenRouter</SelectItem>
+                                                        <SelectItem value="perplexity">Perplexity</SelectItem>
+                                                        <SelectItem value="zhipu">ZhipuAI</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormDescription>
+                                                    {t('自定义偏好的提供商')}
+                                                </FormDescription>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <Button type="submit" disabled={loading}>
+                                        {loading ? t('保存中...') : t('保存偏好')}
+                                    </Button>
+                                </form>
+                            </Form>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {affiliateEnabled && (
+                    <TabsContent value="affiliate" className="mt-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>{t('推广计划')}</CardTitle>
+                                <CardDescription>
+                                    {t('通过推广链接邀请新用户注册，获取奖励')}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>{t('您的推广码')}</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input 
+                                            value={userState.user.affiliate_code || ''} 
+                                            readOnly 
+                                            className="font-mono"
+                                        />
+                                        <Button 
+                                            variant="outline" 
+                                            size="icon" 
+                                            onClick={copyAffiliateCode}
+                                        >
+                                            <Copy className="h-4 w-4" />
+                                        </Button>
                                     </div>
                                 </div>
-                            )}
-                            <div style={{marginTop: 20}}>
-                                <Typography.Text strong>{t('额度预警阈值')} {renderQuotaWithPrompt(notificationSettings.warningThreshold)}</Typography.Text>
-                                <div style={{marginTop: 10}}>
-                                    <AutoComplete
-                                        value={notificationSettings.warningThreshold}
-                                        onChange={val => handleNotificationSettingChange('warningThreshold', val)}
-                                        style={{width: 200}}
-                                        placeholder={t('请输入预警额度')}
-                                        data={[
-                                            { value: 100000, label: '0.2$' },
-                                            { value: 500000, label: '1$' },
-                                            { value: 1000000, label: '5$' },
-                                            { value: 5000000, label: '10$' }
-                                        ]}
-                                    />
+
+                                <div className="space-y-2">
+                                    <Label>{t('推广链接')}</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input 
+                                            value={`${window.location.origin}/register?code=${userState.user.affiliate_code || ''}`} 
+                                            readOnly 
+                                            className="font-mono"
+                                        />
+                                        <Button 
+                                            variant="outline" 
+                                            size="icon" 
+                                            onClick={copyAffiliateUrl}
+                                        >
+                                            <Copy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
-                                <Typography.Text type="secondary" style={{marginTop: 10, display: 'block'}}>
-                                    {t('当剩余额度低于此数值时，系统将通过选择的方式发送通知')}
-                                </Typography.Text>
-                            </div>
-                            <div style={{marginTop: 20}}>
-                                <Button type="primary" onClick={saveNotificationSettings}>
-                                    {t('保存设置')}
-                                </Button>
-                            </div>
+
+                                <Separator className="my-4" />
+
+                                <div className="space-y-2">
+                                    <h3 className="text-lg font-medium">{t('推广规则')}</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        {t('每当有用户通过您的推广链接注册并消费，您将获得相应的奖励。')}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {t('奖励将直接添加到您的账户额度中。')}
+                                    </p>
+                                </div>
+                            </CardContent>
                         </Card>
-                        <Modal
-                            onCancel={() => setShowEmailBindModal(false)}
-                            onOk={bindEmail}
-                            visible={showEmailBindModal}
-                            size={'small'}
-                            centered={true}
-                            maskClosable={false}
-                        >
-                            <Typography.Title heading={6}>{t('绑定邮箱地址')}</Typography.Title>
-                            <div
-                                style={{
-                                    marginTop: 20,
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                }}
-                            >
+                    </TabsContent>
+                )}
+            </Tabs>
+
+            {/* Error Dialog for copy failures */}
+            <Dialog open={showCopyErrorDialog} onOpenChange={setShowCopyErrorDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t('无法复制到剪贴板，请手动复制')}</DialogTitle>
+                    </DialogHeader>
+                    <div className="p-4 bg-muted rounded-md">
+                        <pre className="text-sm break-all whitespace-pre-wrap">{copyErrorText}</pre>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => setShowCopyErrorDialog(false)}>
+                            {t('关闭')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* WeChat Bind Dialog */}
+            <Dialog open={showWeChatBindModal} onOpenChange={setShowWeChatBindModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t('绑定微信账号')}</DialogTitle>
+                        <DialogDescription>
+                            {t('请输入微信验证码进行账号绑定')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="wechat_verification_code">{t('微信验证码')}</Label>
+                            <Input
+                                id="wechat_verification_code"
+                                value={inputs.wechat_verification_code}
+                                onChange={(e) => handleInputChange('wechat_verification_code', e.target.value)}
+                                placeholder={t('请输入微信验证码')}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowWeChatBindModal(false)}>
+                            {t('取消')}
+                        </Button>
+                        <Button onClick={bindWeChat}>
+                            {t('绑定')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Email Bind Dialog */}
+            <Dialog open={showEmailBindModal} onOpenChange={setShowEmailBindModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t('绑定邮箱账号')}</DialogTitle>
+                        <DialogDescription>
+                            {t('请输入邮箱地址和验证码进行账号绑定')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="email">{t('邮箱地址')}</Label>
+                            <Input
+                                id="email"
+                                value={inputs.email}
+                                onChange={(e) => handleInputChange('email', e.target.value)}
+                                placeholder={t('请输入邮箱地址')}
+                            />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <div className="flex-1">
+                                <Label htmlFor="email_verification_code">{t('验证码')}</Label>
                                 <Input
-                                    fluid
-                                    placeholder='输入邮箱地址'
-                                    onChange={(value) => handleInputChange('email', value)}
-                                    name='email'
-                                    type='email'
+                                    id="email_verification_code"
+                                    value={inputs.email_verification_code}
+                                    onChange={(e) => handleInputChange('email_verification_code', e.target.value)}
+                                    placeholder={t('请输入验证码')}
                                 />
-                                <Button
+                            </div>
+                            <div className="pt-6">
+                                <Button 
+                                    variant="outline" 
                                     onClick={sendVerificationCode}
-                                    disabled={disableButton || loading}
+                                    disabled={disableButton || inputs.email === ''}
                                 >
-                                    {disableButton ? `重新发送 (${countdown})` : '获取验证码'}
+                                    {disableButton ? `${countdown}s` : t('发送验证码')}
                                 </Button>
                             </div>
-                            <div style={{marginTop: 10}}>
-                                <Input
-                                    fluid
-                                    placeholder='验证码'
-                                    name='email_verification_code'
-                                    value={inputs.email_verification_code}
-                                    onChange={(value) =>
-                                        handleInputChange('email_verification_code', value)
-                                    }
-                                />
-                            </div>
-                            {turnstileEnabled ? (
-                                <Turnstile
-                                    sitekey={turnstileSiteKey}
-                                    onVerify={(token) => {
-                                        setTurnstileToken(token);
-                                    }}
-                                />
-                            ) : (
-                                <></>
-                            )}
-                        </Modal>
-                        <Modal
-                            onCancel={() => setShowAccountDeleteModal(false)}
-                            visible={showAccountDeleteModal}
-                            size={'small'}
-                            centered={true}
-                            onOk={deleteAccount}
-                        >
-                            <div style={{marginTop: 20}}>
-                                <Banner
-                                    type='danger'
-                                    description='您正在删除自己的帐户，将清空所有数据且不可恢复'
-                                    closeIcon={null}
-                                />
-                            </div>
-                            <div style={{marginTop: 20}}>
-                                <Input
-                                    placeholder={`输入你的账户名 ${userState?.user?.username} 以确认删除`}
-                                    name='self_account_deletion_confirmation'
-                                    value={inputs.self_account_deletion_confirmation}
-                                    onChange={(value) =>
-                                        handleInputChange(
-                                            'self_account_deletion_confirmation',
-                                            value,
-                                        )
-                                    }
-                                />
-                                {turnstileEnabled ? (
-                                    <Turnstile
-                                        sitekey={turnstileSiteKey}
-                                        onVerify={(token) => {
-                                            setTurnstileToken(token);
-                                        }}
-                                    />
-                                ) : (
-                                    <></>
-                                )}
-                            </div>
-                        </Modal>
-                        <Modal
-                            onCancel={() => setShowChangePasswordModal(false)}
-                            visible={showChangePasswordModal}
-                            size={'small'}
-                            centered={true}
-                            onOk={changePassword}
-                        >
-                            <div style={{marginTop: 20}}>
-                                <Input
-                                    name='set_new_password'
-                                    placeholder={t('新密码')}
-                                    value={inputs.set_new_password}
-                                    onChange={(value) =>
-                                        handleInputChange('set_new_password', value)
-                                    }
-                                />
-                                <Input
-                                    style={{marginTop: 20}}
-                                    name='set_new_password_confirmation'
-                                    placeholder={t('确认新密码')}
-                                    value={inputs.set_new_password_confirmation}
-                                    onChange={(value) =>
-                                        handleInputChange('set_new_password_confirmation', value)
-                                    }
-                                />
-                                {turnstileEnabled ? (
-                                    <Turnstile
-                                        sitekey={turnstileSiteKey}
-                                        onVerify={(token) => {
-                                            setTurnstileToken(token);
-                                        }}
-                                    />
-                                ) : (
-                                    <></>
-                                )}
-                            </div>
-                        </Modal>
+                        </div>
                     </div>
-                </Layout.Content>
-            </Layout>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowEmailBindModal(false)}>
+                            {t('取消')}
+                        </Button>
+                        <Button onClick={bindEmail} disabled={loading}>
+                            {loading ? t('绑定中...') : t('绑定')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Change Password Dialog */}
+            <Dialog open={showChangePasswordModal} onOpenChange={setShowChangePasswordModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t('修改密码')}</DialogTitle>
+                        <DialogDescription>
+                            {t('输入新密码并确认')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="set_new_password">{t('新密码')}</Label>
+                            <Input
+                                id="set_new_password"
+                                type="password"
+                                value={inputs.set_new_password}
+                                onChange={(e) => handleInputChange('set_new_password', e.target.value)}
+                                placeholder={t('请输入新密码')}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="set_new_password_confirmation">{t('确认新密码')}</Label>
+                            <Input
+                                id="set_new_password_confirmation"
+                                type="password"
+                                value={inputs.set_new_password_confirmation}
+                                onChange={(e) => handleInputChange('set_new_password_confirmation', e.target.value)}
+                                placeholder={t('请再次输入新密码')}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowChangePasswordModal(false)}>
+                            {t('取消')}
+                        </Button>
+                        <Button onClick={changePassword}>
+                            {t('修改')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Account Delete Dialog */}
+            <AlertDialog open={showAccountDeleteModal} onOpenChange={setShowAccountDeleteModal}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-red-500">{t('删除账户')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t('此操作将永久删除您的账户，所有数据将无法恢复。确认删除请输入 "DELETE" 后点击删除按钮。')}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="py-4">
+                        <Input
+                            value={inputs.self_account_deletion_confirmation}
+                            onChange={(e) => handleInputChange('self_account_deletion_confirmation', e.target.value)}
+                            placeholder={t('请输入 "DELETE" 确认')}
+                        />
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setShowAccountDeleteModal(false)}>
+                            {t('取消')}
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-red-500 hover:bg-red-600"
+                            onClick={deleteAccount}
+                        >
+                            {t('删除')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Spin, Tabs } from '@douyinfe/semi-ui';
-
-
 import { API, showError, showSuccess } from '../helpers';
-import { useTranslation } from 'react-i18next';
-import SettingGeminiModel from '../pages/Setting/Model/SettingGeminiModel.js';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import React, { useEffect, useState } from 'react';
+
+import { Loader2 } from 'lucide-react';
 import SettingClaudeModel from '../pages/Setting/Model/SettingClaudeModel.js';
+import SettingGeminiModel from '../pages/Setting/Model/SettingGeminiModel.js';
 import SettingGlobalModel from '../pages/Setting/Model/SettingGlobalModel.js';
+import { useTranslation } from 'react-i18next';
 
 const ModelSetting = () => {
   const { t } = useTranslation();
@@ -50,11 +50,11 @@ const ModelSetting = () => {
       showError(message);
     }
   };
+  
   async function onRefresh() {
     try {
       setLoading(true);
       await getOptions();
-      // showSuccess('刷新成功');
     } catch (error) {
       showError('刷新失败');
     } finally {
@@ -67,22 +67,47 @@ const ModelSetting = () => {
   }, []);
 
   return (
-    <>
-      <Spin spinning={loading} size='large'>
-        {/* OpenAI */}
-        <Card style={{ marginTop: '10px' }}>
-          <SettingGlobalModel options={inputs} refresh={onRefresh} />
-        </Card>
-        {/* Gemini */}
-        <Card style={{ marginTop: '10px' }}>
-          <SettingGeminiModel options={inputs} refresh={onRefresh} />
-        </Card>
-        {/* Claude */}
-        <Card style={{ marginTop: '10px' }}>
-          <SettingClaudeModel options={inputs} refresh={onRefresh} />
-        </Card>
-      </Spin>
-    </>
+    <div className="space-y-8">
+      {loading && (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
+      
+      {!loading && (
+        <>
+          {/* Global */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('全局模型设置')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SettingGlobalModel options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+          
+          {/* Gemini */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('Gemini模型设置')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SettingGeminiModel options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+          
+          {/* Claude */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('Claude模型设置')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SettingClaudeModel options={inputs} refresh={onRefresh} />
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
   );
 };
 

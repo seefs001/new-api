@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Spin, Tabs } from '@douyinfe/semi-ui';
-
-
 import { API, showError, showSuccess } from '../helpers';
-import SettingsChats from '../pages/Setting/Operation/SettingsChats.js';
-import { useTranslation } from 'react-i18next';
+import { Card, CardContent } from '../components/ui/card';
+import React, { useEffect, useState } from 'react';
+
+import { Loader2 } from 'lucide-react';
 import RequestRateLimit from '../pages/Setting/RateLimit/SettingsRequestRateLimit.js';
+import { useTranslation } from 'react-i18next';
 
 const RateLimitSetting = () => {
   const { t } = useTranslation();
@@ -38,6 +37,7 @@ const RateLimitSetting = () => {
       showError(message);
     }
   };
+  
   async function onRefresh() {
     try {
       setLoading(true);
@@ -55,14 +55,21 @@ const RateLimitSetting = () => {
   }, []);
 
   return (
-    <>
-      <Spin spinning={loading} size='large'>
-        {/* AI请求速率限制 */}
-        <Card style={{ marginTop: '10px' }}>
-          <RequestRateLimit options={inputs} refresh={onRefresh} />
+    <div className="space-y-6">
+      {loading && (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
+      
+      {!loading && (
+        <Card className="mt-4">
+          <CardContent className="p-6">
+            <RequestRateLimit options={inputs} refresh={onRefresh} />
+          </CardContent>
         </Card>
-      </Spin>
-    </>
+      )}
+    </div>
   );
 };
 

@@ -1,21 +1,18 @@
 import React from 'react';
 import UsersTable from '../../components/UsersTable';
-import { Layout } from '@douyinfe/semi-ui';
 import { useTranslation } from 'react-i18next';
 
 const User = () => {
   const { t } = useTranslation();
   return (
-    <>
-      <Layout>
-        <Layout.Header>
-        <h3>{t('管理用户')}</h3>
-      </Layout.Header>
-      <Layout.Content>
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="border-b pb-4">
+        <h3 className="text-2xl font-semibold">{t('管理用户')}</h3>
+      </div>
+      <div>
         <UsersTable />
-        </Layout.Content>
-      </Layout>
-    </>
+      </div>
+    </div>
   );
 };
 

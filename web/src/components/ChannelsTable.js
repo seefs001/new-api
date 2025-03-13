@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import {
   API,
   isMobile,
@@ -9,35 +8,96 @@ import {
   showWarning,
   timestamp2string
 } from '../helpers';
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../components/ui/alert-dialog";
 import { CHANNEL_OPTIONS, ITEMS_PER_PAGE } from '../constants';
+import { Card, CardContent } from "../components/ui/card";
+// Lucide icons
+import {
+  ChevronDown,
+  Filter,
+  List,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Settings,
+  X
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "../components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "../components/ui/form";
+import React, { useEffect, useState } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "../components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
 import {
   getQuotaPerUnit,
   renderGroup,
   renderNumberWithPoint,
-  renderQuota, renderQuotaWithPrompt, stringToColor
+  renderQuota,
+  renderQuotaWithPrompt,
+  stringToColor
 } from '../helpers/render';
-import {
-  Button, Divider,
-  Dropdown,
-  Form, Input,
-  InputNumber, Modal,
-  Popconfirm,
-  Space,
-  SplitButtonGroup,
-  Switch,
-  Table,
-  Tag,
-  Tooltip,
-  Typography,
-  Checkbox,
-  Layout
-} from '@douyinfe/semi-ui';
+
+import { Badge } from "../components/ui/badge";
+// Shadcn UI components
+import { Button } from "../components/ui/button";
+import { Checkbox } from "../components/ui/checkbox";
 import EditChannel from '../pages/Channel/EditChannel';
-import { IconList, IconTreeTriangleDown, IconClose, IconFilter, IconPlus, IconRefresh, IconSetting } from '@douyinfe/semi-icons';
-import { loadChannelModels } from './utils.js';
 import EditTagModal from '../pages/Channel/EditTagModal.js';
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { ScrollArea } from "../components/ui/scroll-area";
+import { Separator } from "../components/ui/separator";
+import { Switch } from "../components/ui/switch";
 import TextNumberInput from './custom/TextNumberInput.js';
+import { cn } from "../lib/utils";
+import { loadChannelModels } from './utils.js';
 import { useTranslation } from 'react-i18next';
 
 function renderTimestamp(timestamp) {
@@ -58,23 +118,22 @@ const ChannelsTable = () => {
       type2label[0] = { value: 0, label: t('未知类型'), color: 'grey' };
     }
     return (
-      <Tag size="large" color={type2label[type]?.color}>
+      <Badge className={cn("bg-foreground text-foreground", type2label[type]?.color)}>
         {type2label[type]?.label}
-      </Tag>
+      </Badge>
     );
   };
 
   const renderTagType = () => {
     return (
-      <Tag
-        color='light-blue'
-        prefixIcon={<IconList />}
+      <Badge className={cn("bg-foreground text-foreground", "light-blue")}
+        prefixIcon={<List className={cn("h-4 w-4")} />}
         size='large'
         shape='circle'
         type='light'
       >
         {t('标签聚合')}
-      </Tag>
+      </Badge>
     );
   };
 
@@ -82,27 +141,27 @@ const ChannelsTable = () => {
     switch (status) {
       case 1:
         return (
-          <Tag size="large" color="green">
+          <Badge className={cn("bg-foreground text-foreground", "green")}>
             {t('已启用')}
-          </Tag>
+          </Badge>
         );
       case 2:
         return (
-          <Tag size="large" color="yellow">
+          <Badge className={cn("bg-foreground text-foreground", "yellow")}>
             {t('已禁用')}
-          </Tag>
+          </Badge>
         );
       case 3:
         return (
-          <Tag size="large" color="yellow">
+          <Badge className={cn("bg-foreground text-foreground", "yellow")}>
             {t('自动禁用')}
-          </Tag>
+          </Badge>
         );
       default:
         return (
-          <Tag size="large" color="grey">
+          <Badge className={cn("bg-foreground text-foreground", "grey")}>
             {t('未知状态')}
-          </Tag>
+          </Badge>
         );
     }
   };
@@ -112,33 +171,33 @@ const ChannelsTable = () => {
     time = time.toFixed(2) + t(' 秒');
     if (responseTime === 0) {
       return (
-        <Tag size="large" color="grey">
+        <Badge className={cn("bg-foreground text-foreground", "grey")}>
           {t('未测试')}
-        </Tag>
+        </Badge>
       );
     } else if (responseTime <= 1000) {
       return (
-        <Tag size="large" color="green">
+        <Badge className={cn("bg-foreground text-foreground", "green")}>
           {time}
-        </Tag>
+        </Badge>
       );
     } else if (responseTime <= 3000) {
       return (
-        <Tag size="large" color="lime">
+        <Badge className={cn("bg-foreground text-foreground", "lime")}>
           {time}
-        </Tag>
+        </Badge>
       );
     } else if (responseTime <= 5000) {
       return (
-        <Tag size="large" color="yellow">
+        <Badge className={cn("bg-foreground text-foreground", "yellow")}>
           {time}
-        </Tag>
+        </Badge>
       );
     } else {
       return (
-        <Tag size="large" color="red">
+        <Badge className={cn("bg-foreground text-foreground", "red")}>
           {time}
-        </Tag>
+        </Badge>
       );
     }
   };
@@ -247,7 +306,7 @@ const ChannelsTable = () => {
       render: (text, record, index) => {
         return (
           <div>
-            <Space spacing={2}>
+            <div className={cn("flex items-center space-x-4")}>
               {text?.split(',')
                 .sort((a, b) => {
                   if (a === 'default') return -1;
@@ -257,7 +316,7 @@ const ChannelsTable = () => {
                 .map((item, index) => {
                   return renderGroup(item);
                 })}
-            </Space>
+            </div>
           </div>
         );
       }
@@ -314,32 +373,32 @@ const ChannelsTable = () => {
         if (record.children === undefined) {
           return (
             <div>
-              <Space spacing={1}>
+              <div className={cn("flex items-center space-x-2")}>
                 <Tooltip content={t('已用额度')}>
-                  <Tag color="white" type="ghost" size="large">
+                  <Badge className={cn("bg-foreground text-foreground", "white")} type="outline" size="sm">
                     {renderQuota(record.used_quota)}
-                  </Tag>
+                  </Badge>
                 </Tooltip>
                 <Tooltip content={t('剩余额度') + record.balance + t('，点击更新')}>
-                  <Tag
-                    color="white"
-                    type="ghost"
-                    size="large"
+                  <Badge
+                    className={cn("bg-foreground text-foreground", "white")}
+                    type="outline"
+                    size="sm"
                     onClick={() => {
                       updateChannelBalance(record);
                     }}
                   >
                     ${renderNumberWithPoint(record.balance)}
-                  </Tag>
+                  </Badge>
                 </Tooltip>
-              </Space>
+              </div>
             </div>
           );
         } else {
           return <Tooltip content={t('已用额度')}>
-            <Tag color="white" type="ghost" size="large">
+            <Badge className={cn("bg-foreground text-foreground", "white")} type="outline" size="sm">
               {renderQuota(record.used_quota)}
-            </Tag>
+            </Badge>
           </Tooltip>;
         }
       }
@@ -352,8 +411,9 @@ const ChannelsTable = () => {
         if (record.children === undefined) {
           return (
             <div>
-              <InputNumber
-                style={{ width: 70 }}
+              <Input
+                type="number"
+                className={cn("w-16")}
                 name="priority"
                 onBlur={(e) => {
                   manageChannel(record.id, 'priority', record, e.target.value);
@@ -367,12 +427,13 @@ const ChannelsTable = () => {
           );
         } else {
           return <>
-            <InputNumber
-              style={{ width: 70 }}
+            <Input
+              type="number"
+              className={cn("w-16")}
               name="priority"
               keepFocus={true}
               onBlur={(e) => {
-                Modal.warning({
+                Dialog.warning({
                   title: t('修改子渠道优先级'),
                   content: t('确定要修改所有子渠道优先级为 ') + e.target.value + t(' 吗？'),
                   onOk: () => {
@@ -402,8 +463,9 @@ const ChannelsTable = () => {
         if (record.children === undefined) {
           return (
             <div>
-              <InputNumber
-                style={{ width: 70 }}
+              <Input
+                type="number"
+                className={cn("w-16")}
                 name="weight"
                 onBlur={(e) => {
                   manageChannel(record.id, 'weight', record, e.target.value);
@@ -417,12 +479,13 @@ const ChannelsTable = () => {
           );
         } else {
           return (
-            <InputNumber
-              style={{ width: 70 }}
+            <Input
+              type="number"
+              className={cn("w-16")}
               name="weight"
               keepFocus={true}
               onBlur={(e) => {
-                Modal.warning({
+                Dialog.warning({
                   title: t('修改子渠道权重'),
                   content: t('确定要修改所有子渠道权重为 ') + e.target.value + t(' 吗？'),
                   onOk: () => {
@@ -452,11 +515,9 @@ const ChannelsTable = () => {
         if (record.children === undefined) {
           return (
             <div>
-              <SplitButtonGroup
-                style={{ marginRight: 1 }}
-                aria-label={t('测试单个渠道操作项目组')}
-              >
+              <div className={cn("flex items-center space-x-2")}>
                 <Button
+                  className={cn("px-2")}
                   theme="light"
                   onClick={() => {
                     testChannel(record, '');
@@ -465,15 +526,15 @@ const ChannelsTable = () => {
                   {t('测试')}
                 </Button>
                 <Button
-                  style={{ padding: '8px 4px' }}
+                  className={cn("px-2")}
                   type="primary"
-                  icon={<IconTreeTriangleDown />}
+                  icon={<ChevronDown className={cn("h-4 w-4")} />}
                   onClick={() => {
                     setCurrentTestChannel(record);
                     setShowModelTestModal(true);
                   }}
                 ></Button>
-              </SplitButtonGroup>
+              </div>
               <Popconfirm
                 title={t('确定是否要删除此渠道？')}
                 content={t('此修改将不可逆')}
@@ -485,15 +546,15 @@ const ChannelsTable = () => {
                   });
                 }}
               >
-                <Button theme="light" type="danger" style={{ marginRight: 1 }}>
+                <Button className={cn("px-2", "bg-transparent", "text-red-500")} theme="light" type="danger">
                   {t('删除')}
                 </Button>
               </Popconfirm>
               {record.status === 1 ? (
                 <Button
+                  className={cn("px-2", "bg-transparent", "text-yellow-500")}
                   theme="light"
                   type="warning"
-                  style={{ marginRight: 1 }}
                   onClick={async () => {
                     manageChannel(record.id, 'disable', record);
                   }}
@@ -502,9 +563,9 @@ const ChannelsTable = () => {
                 </Button>
               ) : (
                 <Button
+                  className={cn("px-2", "bg-transparent", "text-secondary")}
                   theme="light"
                   type="secondary"
-                  style={{ marginRight: 1 }}
                   onClick={async () => {
                     manageChannel(record.id, 'enable', record);
                   }}
@@ -513,9 +574,9 @@ const ChannelsTable = () => {
                 </Button>
               )}
               <Button
+                className={cn("px-2", "bg-transparent", "text-tertiary")}
                 theme="light"
                 type="tertiary"
-                style={{ marginRight: 1 }}
                 onClick={() => {
                   setEditingChannel(record);
                   setShowEdit(true);
@@ -532,7 +593,7 @@ const ChannelsTable = () => {
                   copySelectedChannel(record);
                 }}
               >
-                <Button theme="light" type="primary" style={{ marginRight: 1 }}>
+                <Button className={cn("px-2", "bg-transparent", "text-primary")} theme="light" type="primary">
                   {t('复制')}
                 </Button>
               </Popconfirm>
@@ -542,9 +603,9 @@ const ChannelsTable = () => {
           return (
             <>
               <Button
+                className={cn("px-2", "bg-transparent", "text-secondary")}
                 theme="light"
                 type="secondary"
-                style={{ marginRight: 1 }}
                 onClick={async () => {
                   manageTag(record.key, 'enable');
                 }}
@@ -552,9 +613,9 @@ const ChannelsTable = () => {
                 {t('启用全部')}
               </Button>
               <Button
+                className={cn("px-2", "bg-transparent", "text-warning")}
                 theme="light"
                 type="warning"
-                style={{ marginRight: 1 }}
                 onClick={async () => {
                   manageTag(record.key, 'disable');
                 }}
@@ -562,9 +623,9 @@ const ChannelsTable = () => {
                 {t('禁用全部')}
               </Button>
               <Button
+                className={cn("px-2", "bg-transparent", "text-tertiary")}
                 theme="light"
                 type="tertiary"
-                style={{ marginRight: 1 }}
                 onClick={() => {
                   setShowEditTag(true);
                   setEditingTag(record.key);
@@ -587,10 +648,10 @@ const ChannelsTable = () => {
   // Column selector modal
   const renderColumnSelector = () => {
     return (
-      <Modal
+      <Dialog
         title={t('列设置')}
-        visible={showColumnSelector}
-        onCancel={() => setShowColumnSelector(false)}
+        open={showColumnSelector}
+        onOpenChange={() => setShowColumnSelector(false)}
         footer={
           <>
             <Button onClick={() => initDefaultColumns()}>{t('重置')}</Button>
@@ -601,7 +662,7 @@ const ChannelsTable = () => {
         style={{ width: isMobile() ? '90%' : 500 }}
         bodyStyle={{ padding: '24px' }}
       >
-        <div style={{ marginBottom: 20 }}>
+        <div className={cn("mb-4")}>
           <Checkbox
             checked={Object.values(visibleColumns).every(v => v === true)}
             indeterminate={Object.values(visibleColumns).some(v => v === true) && !Object.values(visibleColumns).every(v => v === true)}
@@ -610,15 +671,7 @@ const ChannelsTable = () => {
             {t('全选')}
           </Checkbox>
         </div>
-        <div style={{ 
-          display: 'flex', 
-          flexWrap: 'wrap', 
-          maxHeight: '400px', 
-          overflowY: 'auto',
-          border: '1px solid var(--semi-color-border)',
-          borderRadius: '6px',
-          padding: '16px'
-        }}>
+        <div className={cn("flex flex-wrap max-h-[400px] overflow-y-auto", "border border-border rounded-md p-4")}>
           {allColumns.map(column => {
             // Skip columns without title
             if (!column.title) {
@@ -626,11 +679,7 @@ const ChannelsTable = () => {
             }
             
             return (
-              <div key={column.key} style={{ 
-                width: isMobile() ? '100%' : '50%', 
-                marginBottom: 16, 
-                paddingRight: 8 
-              }}>
+              <div key={column.key} className={cn("w-full", "mb-4", "pr-4")}>
                 <Checkbox
                   checked={!!visibleColumns[column.key]}
                   onChange={e => handleColumnVisibilityChange(column.key, e.target.checked)}
@@ -641,7 +690,7 @@ const ChannelsTable = () => {
             );
           })}
         </div>
-      </Modal>
+      </Dialog>
     );
   };
 
@@ -1197,109 +1246,95 @@ const ChannelsTable = () => {
         handleClose={closeEdit}
         editingChannel={editingChannel}
       />
-      <Form
-        onSubmit={() => {
-          searchChannels(searchKeyword, searchGroup, searchModel, enableTagMode);
-        }}
-        labelPosition="left"
-      >
-        <div style={{ display: 'flex' }}>
-          <Space>
-            <Form.Input
-              field="search_keyword"
-              label={t('搜索渠道关键词')}
-              placeholder={t('搜索渠道的 ID，名称和密钥 ...')}
-              value={searchKeyword}
-              loading={searching}
-              onChange={(v) => {
-                setSearchKeyword(v.trim());
-              }}
-            />
-            <Form.Input
-              field="search_model"
-              label={t('模型')}
-              placeholder={t('模型关键字')}
-              value={searchModel}
-              loading={searching}
-              onChange={(v) => {
-                setSearchModel(v.trim());
-              }}
-            />
-            <Form.Select
-              field="group"
-              label={t('分组')}
-              optionList={[{ label: t('选择分组'), value: null }, ...groupOptions]}
-              initValue={null}
-              onChange={(v) => {
-                setSearchGroup(v);
-                searchChannels(searchKeyword, v, searchModel, enableTagMode);
-              }}
-            />
-            <Button
-              label={t('查询')}
-              type="primary"
-              htmlType="submit"
-              className="btn-margin-right"
-              style={{ marginRight: 8 }}
+      
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="w-full sm:w-auto flex-1">
+            <div className="grid gap-2">
+              <Label htmlFor="search_keyword">{t('搜索渠道关键词')}</Label>
+              <Input
+                id="search_keyword"
+                placeholder={t('搜索渠道的 ID，名称和密钥 ...')}
+                value={searchKeyword}
+                className="max-w-lg"
+                onChange={(e) => setSearchKeyword(e.target.value.trim())}
+              />
+            </div>
+          </div>
+          
+          <div className="w-full sm:w-auto flex-1">
+            <div className="grid gap-2">
+              <Label htmlFor="search_model">{t('模型')}</Label>
+              <Input
+                id="search_model"
+                placeholder={t('模型关键字')}
+                value={searchModel}
+                className="max-w-lg"
+                onChange={(e) => setSearchModel(e.target.value.trim())}
+              />
+            </div>
+          </div>
+          
+          <div className="w-full sm:w-auto flex-1">
+            <div className="grid gap-2">
+              <Label htmlFor="search_group">{t('分组')}</Label>
+              <Select
+                value={searchGroup}
+                onValueChange={(value) => {
+                  setSearchGroup(value);
+                  searchChannels(searchKeyword, value, searchModel, enableTagMode);
+                }}
+              >
+                <SelectTrigger id="search_group" className="max-w-lg">
+                  <SelectValue placeholder={t('选择分组')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">{t('选择分组')}</SelectItem>
+                  {groupOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="flex items-end">
+            <Button 
+              className="mb-0.5"
+              onClick={() => searchChannels(searchKeyword, searchGroup, searchModel, enableTagMode)}
             >
               {t('查询')}
             </Button>
-          </Space>
+          </div>
         </div>
-      </Form>
-      <Divider style={{ marginBottom: 15 }} />
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: isMobile() ? 'column' : 'row',
-          marginTop: isMobile() ? 0 : -45,
-          zIndex: 999,
-          pointerEvents: 'none'
-        }}
-      >
-        <Space
-          style={{ 
-            pointerEvents: 'auto', 
-            marginTop: isMobile() ? 0 : 45,
-            marginBottom: isMobile() ? 16 : 0,
-            display: 'flex',
-            flexWrap: isMobile() ? 'wrap' : 'nowrap',
-            gap: '8px'
-          }}
-        >
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            marginRight: 16,
-            flexWrap: 'nowrap'
-          }}>
-            <Typography.Text strong style={{ marginRight: 8 }}>{t('使用ID排序')}</Typography.Text>
+        
+        <Separator />
+        
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="id-sort">{t('使用ID排序')}</Label>
             <Switch
+              id="id-sort"
               checked={idSort}
-              label={t('使用ID排序')}
-              uncheckedText={t('关')}
-              aria-label={t('是否用ID排序')}
-              onChange={(v) => {
-                localStorage.setItem('id-sort', v + '');
-                setIdSort(v);
-                loadChannels(0, pageSize, v, enableTagMode)
+              onCheckedChange={(checked) => {
+                localStorage.setItem('id-sort', checked + '');
+                setIdSort(checked);
+                loadChannels(0, pageSize, checked, enableTagMode)
                   .then()
                   .catch((reason) => {
                     showError(reason);
                   });
               }}
-            ></Switch>
+            />
           </div>
           
-          <div style={{ 
-            display: 'flex', 
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}>
+          <div className="flex flex-wrap items-center gap-2">
             <Button
-              theme="light"
-              type="primary"
-              icon={<IconPlus />}
+              variant="outline"
+              size="sm"
+              className="gap-1"
               onClick={() => {
                 setEditingChannel({
                   id: undefined
@@ -1307,302 +1342,414 @@ const ChannelsTable = () => {
                 setShowEdit(true);
               }}
             >
+              <Plus className="h-4 w-4" />
               {t('添加渠道')}
             </Button>
             
             <Button
-              theme="light"
-              type="primary"
-              icon={<IconRefresh />}
+              variant="outline"
+              size="sm"
+              className="gap-1"
               onClick={refresh}
             >
+              <RefreshCw className="h-4 w-4" />
               {t('刷新')}
             </Button>
             
-            <Dropdown
-              trigger="click"
-              render={
-                <Dropdown.Menu>
-                  <Dropdown.Item>
-                    <Popconfirm
-                      title={t('确定？')}
-                      okType={'warning'}
-                      onConfirm={testAllChannels}
-                      position={isMobile() ? 'top' : 'top'}
-                    >
-                      <Button theme="light" type="warning" style={{ width: '100%' }}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1">
+                  <Settings className="h-4 w-4" />
+                  {t('批量操作')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[200px]">
+                <DropdownMenuItem asChild>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-start">
                         {t('测试所有通道')}
                       </Button>
-                    </Popconfirm>
-                  </Dropdown.Item>
-                  <Dropdown.Item>
-                    <Popconfirm
-                      title={t('确定？')}
-                      okType={'secondary'}
-                      onConfirm={updateAllChannelsBalance}
-                    >
-                      <Button theme="light" type="secondary" style={{ width: '100%' }}>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t('确定？')}</AlertDialogTitle>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('取消')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={testAllChannels}>
+                          {t('确定')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem asChild>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-start">
                         {t('更新所有已启用通道余额')}
                       </Button>
-                    </Popconfirm>
-                  </Dropdown.Item>
-                  <Dropdown.Item>
-                    <Popconfirm
-                      title={t('确定是否要删除禁用通道？')}
-                      content={t('此修改将不可逆')}
-                      okType={'danger'}
-                      onConfirm={deleteAllDisabledChannels}
-                    >
-                      <Button theme="light" type="danger" style={{ width: '100%' }}>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t('确定？')}</AlertDialogTitle>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('取消')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={updateAllChannelsBalance}>
+                          {t('确定')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem asChild>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-start">
                         {t('删除禁用通道')}
                       </Button>
-                    </Popconfirm>
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              }
-            >
-              <Button theme="light" type="tertiary" icon={<IconSetting />}>
-                {t('批量操作')}
-              </Button>
-            </Dropdown>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t('确定是否要删除禁用通道？')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t('此修改将不可逆')}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('取消')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={deleteAllDisabledChannels}>
+                          {t('确定')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </Space>
-      </div>
-      <div style={{ 
-        marginTop: 20,
-        display: 'flex',
-        flexDirection: isMobile() ? 'column' : 'row',
-        alignItems: isMobile() ? 'flex-start' : 'center',
-        gap: isMobile() ? '8px' : '16px'
-      }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          marginBottom: isMobile() ? 8 : 0
-        }}>
-          <Typography.Text strong style={{ marginRight: 8 }}>{t('开启批量操作')}</Typography.Text>
-          <Switch
-            label={t('开启批量操作')}
-            uncheckedText={t('关')}
-            aria-label={t('是否开启批量操作')}
-            onChange={(v) => {
-              setEnableBatchDelete(v);
-            }}
-          />
         </div>
         
-        <div style={{ 
-          display: 'flex', 
-          flexWrap: 'wrap',
-          gap: '8px'
-        }}>
-          <Popconfirm
-            title={t('确定是否要删除所选通道？')}
-            content={t('此修改将不可逆')}
-            okType={'danger'}
-            onConfirm={batchDeleteChannels}
-            disabled={!enableBatchDelete}
-          >
-            <Button
-              disabled={!enableBatchDelete}
-              theme="light"
-              type="danger"
-            >
-              {t('删除所选通道')}
-            </Button>
-          </Popconfirm>
-          <Popconfirm
-            title={t('确定是否要修复数据库一致性？')}
-            content={t('进行该操作时，可能导致渠道访问错误，请仅在数据库出现问题时使用')}
-            okType={'warning'}
-            onConfirm={fixChannelsAbilities}
-          >
-            <Button theme="light" type="secondary">
-              {t('修复数据库一致性')}
-            </Button>
-          </Popconfirm>
-        </div>
-      </div>
-      
-      <div style={{ 
-        marginTop: 20,
-        display: 'flex',
-        flexDirection: isMobile() ? 'column' : 'row',
-        alignItems: isMobile() ? 'flex-start' : 'center',
-        gap: isMobile() ? '8px' : '16px'
-      }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          marginBottom: isMobile() ? 8 : 0
-        }}>
-          <Typography.Text strong style={{ marginRight: 8 }}>{t('标签聚合模式')}</Typography.Text>
-          <Switch
-            checked={enableTagMode}
-            label={t('标签聚合模式')}
-            uncheckedText={t('关')}
-            aria-label={t('是否启用标签聚合')}
-            onChange={(v) => {
-              setEnableTagMode(v);
-              loadChannels(0, pageSize, idSort, v);
-            }}
-          />
-        </div>
-        
-        <div style={{ 
-          display: 'flex', 
-          flexWrap: 'wrap',
-          gap: '8px'
-        }}>
-          <Button
-            disabled={!enableBatchDelete}
-            theme="light"
-            type="primary"
-            onClick={() => setShowBatchSetTag(true)}
-          >
-            {t('批量设置标签')}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="batch-operations">{t('开启批量操作')}</Label>
+            <Switch
+              id="batch-operations"
+              checked={enableBatchDelete}
+              onCheckedChange={setEnableBatchDelete}
+            />
+          </div>
           
-          <Button
-            theme="light"
-            type="tertiary"
-            icon={<IconSetting />}
-            onClick={() => setShowColumnSelector(true)}
-          >
-            {t('列设置')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={!enableBatchDelete || selectedChannels.length === 0}
+                >
+                  {t('删除所选通道')}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('确定是否要删除所选通道？')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('此修改将不可逆')}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('取消')}</AlertDialogCancel>
+                  <AlertDialogAction onClick={batchDeleteChannels}>
+                    {t('确定')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {t('修复数据库一致性')}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('确定是否要修复数据库一致性？')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('进行该操作时，可能导致渠道访问错误，请仅在数据库出现问题时使用')}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('取消')}</AlertDialogCancel>
+                  <AlertDialogAction onClick={fixChannelsAbilities}>
+                    {t('确定')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+        
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="tag-mode">{t('标签聚合模式')}</Label>
+            <Switch
+              id="tag-mode"
+              checked={enableTagMode}
+              onCheckedChange={(checked) => {
+                setEnableTagMode(checked);
+                loadChannels(0, pageSize, idSort, checked);
+              }}
+            />
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!enableBatchDelete || selectedChannels.length === 0}
+              onClick={() => setShowBatchSetTag(true)}
+            >
+              {t('批量设置标签')}
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() => setShowColumnSelector(true)}
+            >
+              <Settings className="h-4 w-4" />
+              {t('列设置')}
+            </Button>
+          </div>
+        </div>
+        
+        <div className="rounded-md border">
+          {loading ? (
+            <div className="flex justify-center items-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {enableBatchDelete && (
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={
+                          selectedChannels.length > 0 && 
+                          selectedChannels.length === pageData.length
+                        }
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedChannels(pageData);
+                          } else {
+                            setSelectedChannels([]);
+                          }
+                        }}
+                      />
+                    </TableHead>
+                  )}
+                  
+                  {getVisibleColumns().map((column) => (
+                    <TableHead key={column.key}>
+                      {column.title}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageData.map((record) => (
+                  <TableRow
+                    key={record.key}
+                    className={
+                      record.status !== 1 ? "bg-muted/50" : ""
+                    }
+                  >
+                    {enableBatchDelete && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedChannels.some(
+                            (channel) => channel.id === record.id
+                          )}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedChannels([...selectedChannels, record]);
+                            } else {
+                              setSelectedChannels(
+                                selectedChannels.filter(
+                                  (channel) => channel.id !== record.id
+                                )
+                              );
+                            }
+                          }}
+                        />
+                      </TableCell>
+                    )}
+                    
+                    {getVisibleColumns().map((column) => (
+                      <TableCell key={`${record.key}-${column.key}`}>
+                        {column.render 
+                          ? column.render(record[column.dataIndex], record) 
+                          : record[column.dataIndex]}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+        
+        <div className="flex items-center justify-end space-x-2 py-4">
+          <div className="flex-1 text-sm text-muted-foreground">
+            {t('共 {{total}} 条记录', { total: channelCount })}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(activePage - 1)}
+              disabled={activePage === 1}
+            >
+              {t('上一页')}
+            </Button>
+            <div className="text-sm">
+              {t('第 {{current}} 页，共 {{total}} 页', { 
+                current: activePage, 
+                total: Math.ceil(channelCount / pageSize) 
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(activePage + 1)}
+              disabled={activePage >= Math.ceil(channelCount / pageSize)}
+            >
+              {t('下一页')}
+            </Button>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => handlePageSizeChange(Number(value))}
+            >
+              <SelectTrigger className="w-[80px]">
+                <SelectValue placeholder={pageSize} />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 50, 100].map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
-
-      <Table
-        loading={loading}
-        columns={getVisibleColumns()}
-        dataSource={pageData}
-        pagination={{
-          currentPage: activePage,
-          pageSize: pageSize,
-          total: channelCount,
-          pageSizeOpts: [10, 20, 50, 100],
-          showSizeChanger: true,
-          formatPageText: (page) => '',
-          onPageSizeChange: (size) => {
-            handlePageSizeChange(size).then();
-          },
-          onPageChange: handlePageChange
-        }}
-        expandAllRows={false}
-        onRow={handleRow}
-        rowSelection={
-          enableBatchDelete
-            ? {
-              onChange: (selectedRowKeys, selectedRows) => {
-                // console.log(`selectedRowKeys: ${selectedRowKeys}`, 'selectedRows: ', selectedRows);
-                setSelectedChannels(selectedRows);
-              }
-            }
-            : null
-        }
-      />
-      <Modal
-        title={t('批量设置标签')}
-        visible={showBatchSetTag}
-        onOk={batchSetChannelTag}
-        onCancel={() => setShowBatchSetTag(false)}
-        maskClosable={false}
-        centered={true}
-        style={{ width: isMobile() ? '90%' : 500 }}
-      >
-        <div style={{ marginBottom: 20 }}>
-          <Typography.Text>{t('请输入要设置的标签名称')}</Typography.Text>
-        </div>
-        <Input
-          placeholder={t('请输入标签名称')}
-          value={batchSetTagValue}
-          onChange={(v) => setBatchSetTagValue(v)}
-          size="large"
-        />
-        <div style={{ marginTop: 16 }}>
-          <Typography.Text type="secondary">
-            {t('已选择 ${count} 个渠道').replace('${count}', selectedChannels.length)}
-          </Typography.Text>
-        </div>
-      </Modal>
       
-      {/* 模型测试弹窗 */}
-      <Modal
-        title={t('选择模型进行测试')}
-        visible={showModelTestModal && currentTestChannel !== null}
-        onCancel={() => {
-          setShowModelTestModal(false);
-          setModelSearchKeyword('');
-        }}
-        footer={null}
-        maskClosable={true}
-        centered={true}
-      >
-        <div style={{ maxHeight: '500px', overflowY: 'auto', padding: '10px' }}>
-          {currentTestChannel && (
-            <div>
-              <Typography.Title heading={6} style={{ marginBottom: '16px' }}>
-                {t('渠道')}: {currentTestChannel.name}
-              </Typography.Title>
-              
-              {/* 搜索框 */}
+      <Dialog open={showBatchSetTag} onOpenChange={setShowBatchSetTag}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('批量设置标签')}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="tag">{t('请输入要设置的标签名称')}</Label>
               <Input
-                placeholder={t('搜索模型...')}
-                value={modelSearchKeyword}
-                onChange={(v) => setModelSearchKeyword(v)}
-                style={{ marginBottom: '16px' }}
-                prefix={<IconFilter />}
-                showClear
+                id="tag"
+                placeholder={t('请输入标签名称')}
+                value={batchSetTagValue}
+                onChange={(e) => setBatchSetTagValue(e.target.value)}
               />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {t('已选择 {{count}} 个渠道', { count: selectedChannels.length })}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBatchSetTag(false)}>
+              {t('取消')}
+            </Button>
+            <Button type="submit" onClick={batchSetChannelTag}>
+              {t('确定')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog 
+        open={showModelTestModal && currentTestChannel !== null} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowModelTestModal(false);
+            setModelSearchKeyword('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{t('选择模型进行测试')}</DialogTitle>
+          </DialogHeader>
+          {currentTestChannel && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">
+                {t('渠道')}: {currentTestChannel.name}
+              </h3>
               
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
-                gap: '12px',
-                marginBottom: '16px'
-              }}>
-                {currentTestChannel.models.split(',')
-                  .filter(model => model.toLowerCase().includes(modelSearchKeyword.toLowerCase()))
-                  .map((model, index) => {
-
-                    return (
-                      <Button
-                          theme="light"
-                          type="tertiary"
-                          style={{ 
-                            height: 'auto',
-                            padding: '10px 12px',
-                            textAlign: 'center',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            width: '100%',
-                            borderRadius: '6px'
-                          }}
-                          onClick={() => {
-                            testChannel(currentTestChannel, model);
-                          }}
-                        >
-                          {model}
-                        </Button>
-                    );
-                  })}
+              <div className="flex items-center space-x-2">
+                <Input
+                  placeholder={t('搜索模型...')}
+                  value={modelSearchKeyword}
+                  onChange={(e) => setModelSearchKeyword(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setModelSearchKeyword('')}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
               
-              {/* 显示搜索结果数量 */}
+              <ScrollArea className="h-[300px]">
+                <div className="grid grid-cols-2 gap-2">
+                  {currentTestChannel.models.split(',')
+                    .filter(model => model.toLowerCase().includes(modelSearchKeyword.toLowerCase()))
+                    .map((model, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        className="text-left truncate justify-start h-auto py-2"
+                        onClick={() => {
+                          testChannel(currentTestChannel, model);
+                        }}
+                      >
+                        {model}
+                      </Button>
+                    ))}
+                </div>
+              </ScrollArea>
+              
               {modelSearchKeyword && (
-                <Typography.Text type="secondary" style={{ display: 'block' }}>
-                  {t('找到')} {currentTestChannel.models.split(',').filter(model => 
-                    model.toLowerCase().includes(modelSearchKeyword.toLowerCase())
-                  ).length} {t('个模型')}
-                </Typography.Text>
+                <p className="text-sm text-muted-foreground">
+                  {t('找到 {{count}} 个模型', { 
+                    count: currentTestChannel.models.split(',').filter(model => 
+                      model.toLowerCase().includes(modelSearchKeyword.toLowerCase())
+                    ).length 
+                  })}
+                </p>
               )}
             </div>
           )}
-        </div>
-      </Modal>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

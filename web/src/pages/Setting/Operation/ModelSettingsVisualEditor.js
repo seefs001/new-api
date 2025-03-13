@@ -1,9 +1,37 @@
+import { Clipboard, Plus, Save, Search, Trash2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '../../../components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from '../../../components/ui/form';
 // ModelSettingsVisualEditor.js
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Input, Modal, Form, Space } from '@douyinfe/semi-ui';
-import { IconDelete, IconPlus, IconSearch, IconSave } from '@douyinfe/semi-icons';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '../../../components/ui/table';
 import { showError, showSuccess } from '../../../helpers';
+
 import { API } from '../../../helpers';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import { Switch } from '../../../components/ui/switch';
 import { useTranslation } from 'react-i18next';
 
 export default function ModelSettingsVisualEditor(props) {
@@ -123,63 +151,6 @@ export default function ModelSettingsVisualEditor(props) {
     }
   };
 
-  const columns = [
-    {
-      title: t('模型名称'),
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: t('模型固定价格'),
-      dataIndex: 'price',
-      key: 'price',
-      render: (text, record) => (
-        <Input
-          value={text}
-          placeholder={t('按量计费')}
-          onChange={value => updateModel(record.name, 'price', value)}
-        />
-      )
-    },
-    {
-      title: t('模型倍率'),
-      dataIndex: 'ratio',
-      key: 'ratio',
-      render: (text, record) => (
-        <Input
-          value={text}
-          placeholder={record.price !== '' ? t('模型倍率') : t('默认补全倍率')}
-          disabled={record.price !== ''}
-          onChange={value => updateModel(record.name, 'ratio', value)}
-        />
-      )
-    },
-    {
-      title: t('补全倍率'),
-      dataIndex: 'completionRatio',
-      key: 'completionRatio',
-      render: (text, record) => (
-        <Input
-          value={text}
-          placeholder={record.price !== '' ? t('补全倍率') : t('默认补全倍率')}
-          disabled={record.price !== ''}
-          onChange={value => updateModel(record.name, 'completionRatio', value)}
-        />
-      )
-    },
-    {
-      title: t('操作'),
-      key: 'action',
-      render: (_, record) => (
-        <Button
-          icon={<IconDelete />}
-          type="danger"
-          onClick={() => deleteModel(record.name)}
-        />
-      )
-    }
-  ];
-
   const updateModel = (name, field, value) => {
     if (isNaN(value)) {
       showError('请输入数字');
@@ -197,6 +168,7 @@ export default function ModelSettingsVisualEditor(props) {
   const deleteModel = (name) => {
     setModels(prev => prev.filter(model => model.name !== name));
   };
+  
   const addModel = (values) => {
     // 检查模型名称是否存在, 如果存在则拒绝添加
     if (models.some(model => model.name === values.name)) {
@@ -216,99 +188,192 @@ export default function ModelSettingsVisualEditor(props) {
 
   return (
     <>
-      <Space vertical align="start" style={{ width: '100%' }}>
-        <Space>
-          <Button icon={<IconPlus />} onClick={() => setVisible(true)}>
+      <div className="flex flex-col space-y-4 w-full">
+        <div className="flex space-x-4">
+          <Button variant="outline" onClick={() => setVisible(true)} className="flex items-center">
+            <Plus className="mr-2 h-4 w-4" />
             {t('添加模型')}
           </Button>
-          <Button type="primary" icon={<IconSave />} onClick={SubmitData}>
+          <Button variant="default" onClick={SubmitData} disabled={loading} className="flex items-center">
+            <Save className="mr-2 h-4 w-4" />
             {t('应用更改')}
           </Button>
-          <Input
-            prefix={<IconSearch />}
-            placeholder={t('搜索模型名称')}
-            value={searchText}
-            onChange={value => {
-              setSearchText(value)
-              setCurrentPage(1);
-            }}
-            style={{ width: 200 }}
-          />
-        </Space>
-        <Table
-          columns={columns}
-          dataSource={pagedData}
-          pagination={{
-            currentPage: currentPage,
-            pageSize: pageSize,
-            total: filteredModels.length,
-            onPageChange: page => setCurrentPage(page),
-            formatPageText: (page) =>
-              t('第 {{start}} - {{end}} 条，共 {{total}} 条', {
-                start: page.currentStart,
-                end: page.currentEnd,
-                total: filteredModels.length
-              }),
-            showTotal: true,
-            showSizeChanger: false
-          }}
-        />
-      </Space>
-
-      <Modal
-        title={t('添加模型')}
-        visible={visible}
-        onCancel={() => setVisible(false)}
-        onOk={() => {
-          currentModel && addModel(currentModel);
-        }}
-      >
-        <Form>
-          <Form.Input
-            field="name"
-            label={t('模型名称')}
-            placeholder="strawberry"
-            required
-            onChange={value => setCurrentModel(prev => ({ ...prev, name: value }))}
-          />
-          <Form.Switch
-            field="priceMode"
-            label={<>{t('定价模式')}：{currentModel?.priceMode ? t("固定价格") : t("倍率模式")}</>}
-            onChange={checked => {
-              setCurrentModel(prev => ({
-                ...prev,
-                price: '',
-                ratio: '',
-                completionRatio: '',
-                priceMode: checked
-              }));
-            }}
-          />
-          {currentModel?.priceMode ? (
-            <Form.Input
-              field="price"
-              label={t('固定价格(每次)')}
-              placeholder={t('输入每次价格')}
-              onChange={value => setCurrentModel(prev => ({ ...prev, price: value }))}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t('搜索模型名称')}
+              value={searchText}
+              onChange={(e) => {
+                setSearchText(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-8 w-[200px]"
             />
-          ) : (
-            <>
-              <Form.Input
-                field="ratio"
-                label={t('模型倍率')}
-                placeholder={t('输入模型倍率')}
-                onChange={value => setCurrentModel(prev => ({ ...prev, ratio: value }))}
+          </div>
+        </div>
+        
+        <div className="border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('模型名称')}</TableHead>
+                <TableHead>{t('模型固定价格')}</TableHead>
+                <TableHead>{t('模型倍率')}</TableHead>
+                <TableHead>{t('补全倍率')}</TableHead>
+                <TableHead>{t('操作')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pagedData.map((record) => (
+                <TableRow key={record.name}>
+                  <TableCell>{record.name}</TableCell>
+                  <TableCell>
+                    <Input
+                      value={record.price}
+                      placeholder={t('按量计费')}
+                      onChange={(e) => updateModel(record.name, 'price', e.target.value)}
+                      className="max-w-[200px]"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      value={record.ratio}
+                      placeholder={record.price !== '' ? t('模型倍率') : t('默认补全倍率')}
+                      disabled={record.price !== ''}
+                      onChange={(e) => updateModel(record.name, 'ratio', e.target.value)}
+                      className="max-w-[200px]"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      value={record.completionRatio}
+                      placeholder={record.price !== '' ? t('补全倍率') : t('默认补全倍率')}
+                      disabled={record.price !== ''}
+                      onChange={(e) => updateModel(record.name, 'completionRatio', e.target.value)}
+                      className="max-w-[200px]"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteModel(record.name)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          
+          {/* Pagination */}
+          <div className="flex items-center justify-end space-x-2 py-4 px-4">
+            <div className="text-sm text-muted-foreground">
+              {t('第 {{start}} - {{end}} 条，共 {{total}} 条', {
+                start: ((currentPage - 1) * pageSize) + 1,
+                end: Math.min(currentPage * pageSize, filteredModels.length),
+                total: filteredModels.length
+              })}
+            </div>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                {t('上一页')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(page => page + 1)}
+                disabled={currentPage * pageSize >= filteredModels.length}
+              >
+                {t('下一页')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={visible} onOpenChange={setVisible}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('添加模型')}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="model-name">{t('模型名称')}</Label>
+              <Input
+                id="model-name"
+                placeholder="strawberry"
+                onChange={(e) => setCurrentModel(prev => ({ ...prev, name: e.target.value }))}
               />
-              <Form.Input
-                field="completionRatio"
-                label={t('补全倍率')}
-                placeholder={t('输入补全价格')}
-                onChange={value => setCurrentModel(prev => ({ ...prev, completionRatio: value }))}
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="price-mode"
+                checked={currentModel?.priceMode}
+                onCheckedChange={(checked) => {
+                  setCurrentModel(prev => ({
+                    ...prev,
+                    price: '',
+                    ratio: '',
+                    completionRatio: '',
+                    priceMode: checked
+                  }));
+                }}
               />
-            </>
-          )}
-        </Form>
-      </Modal>
+              <Label htmlFor="price-mode">
+                {t('定价模式')}：{currentModel?.priceMode ? t("固定价格") : t("倍率模式")}
+              </Label>
+            </div>
+            
+            {currentModel?.priceMode ? (
+              <div className="space-y-2">
+                <Label htmlFor="fixed-price">{t('固定价格(每次)')}</Label>
+                <Input
+                  id="fixed-price"
+                  placeholder={t('输入每次价格')}
+                  onChange={(e) => setCurrentModel(prev => ({ ...prev, price: e.target.value }))}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="model-ratio">{t('模型倍率')}</Label>
+                  <Input
+                    id="model-ratio"
+                    placeholder={t('输入模型倍率')}
+                    onChange={(e) => setCurrentModel(prev => ({ ...prev, ratio: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="completion-ratio">{t('补全倍率')}</Label>
+                  <Input
+                    id="completion-ratio"
+                    placeholder={t('输入补全价格')}
+                    onChange={(e) => setCurrentModel(prev => ({ ...prev, completionRatio: e.target.value }))}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVisible(false)}>
+              {t('取消')}
+            </Button>
+            <Button onClick={() => currentModel && addModel(currentModel)}>
+              {t('确定')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
