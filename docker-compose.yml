@@ -13,7 +13,7 @@ services:
       - ./data:/data
       - ./logs:/app/logs
     environment:
-      - SQL_DSN=root:123456@tcp(mysql:3306)/new-api  # Point to the mysql service
+#      - SQL_DSN=root:123456@tcp(mysql:3306)/new-api  # Point to the mysql service
       - REDIS_CONN_STRING=redis://redis
       - TZ=Asia/Shanghai
     #      - SESSION_SECRET=random_string  # 多机部署时设置，必须修改这个随机字符串！！！！！！！
