@@ -131,17 +131,12 @@ var defaultModelRatio = map[string]float64{
 	"bge-large-en":                        0.002 * RMB,
 	"tao-8k":                              0.002 * RMB,
 	"PaLM-2":                              1,
-	"gemini-pro":                          1, // $0.00025 / 1k characters -> $0.001 / 1k tokens
-	"gemini-pro-vision":                   1, // $0.00025 / 1k characters -> $0.001 / 1k tokens
-	"gemini-1.0-pro-vision-001":           1,
-	"gemini-1.0-pro-001":                  1,
-	"gemini-1.5-pro-latest":               1.75, // $3.5 / 1M tokens
-	"gemini-1.5-pro-exp-0827":             1.75, // $3.5 / 1M tokens
-	"gemini-1.5-flash-latest":             1,
-	"gemini-1.5-flash-exp-0827":           1,
-	"gemini-1.0-pro-latest":               1,
-	"gemini-1.0-pro-vision-latest":        1,
-	"gemini-ultra":                        1,
+	"gemini-1.5-pro-latest":               1.25, // $3.5 / 1M tokens
+	"gemini-1.5-flash-latest":             0.075,
+	"gemini-2.0-flash":                    0.05,
+	"gemini-2.5-pro-exp-03-25":            0.625,
+	"gemini-2.5-pro-preview-03-25":        0.625,
+	"text-embedding-004":                  0.001,
 	"chatglm_turbo":                       0.3572,     // ￥0.005 / 1k tokens
 	"chatglm_pro":                         0.7143,     // ￥0.01 / 1k tokens
 	"chatglm_std":                         0.3572,     // ￥0.005 / 1k tokens
@@ -207,26 +202,27 @@ var defaultModelRatio = map[string]float64{
 }
 
 var defaultModelPrice = map[string]float64{
-	"suno_music":        0.1,
-	"suno_lyrics":       0.01,
-	"dall-e-3":          0.04,
-	"gpt-4-gizmo-*":     0.1,
-	"mj_imagine":        0.1,
-	"mj_variation":      0.1,
-	"mj_reroll":         0.1,
-	"mj_blend":          0.1,
-	"mj_modal":          0.1,
-	"mj_zoom":           0.1,
-	"mj_shorten":        0.1,
-	"mj_high_variation": 0.1,
-	"mj_low_variation":  0.1,
-	"mj_pan":            0.1,
-	"mj_inpaint":        0,
-	"mj_custom_zoom":    0,
-	"mj_describe":       0.05,
-	"mj_upscale":        0.05,
-	"swap_face":         0.05,
-	"mj_upload":         0.05,
+	"suno_music":              0.1,
+	"suno_lyrics":             0.01,
+	"dall-e-3":                0.04,
+	"imagen-3.0-generate-002": 0.03,
+	"gpt-4-gizmo-*":           0.1,
+	"mj_imagine":              0.1,
+	"mj_variation":            0.1,
+	"mj_reroll":               0.1,
+	"mj_blend":                0.1,
+	"mj_modal":                0.1,
+	"mj_zoom":                 0.1,
+	"mj_shorten":              0.1,
+	"mj_high_variation":       0.1,
+	"mj_low_variation":        0.1,
+	"mj_pan":                  0.1,
+	"mj_inpaint":              0,
+	"mj_custom_zoom":          0,
+	"mj_describe":             0.05,
+	"mj_upscale":              0.05,
+	"swap_face":               0.05,
+	"mj_upload":               0.05,
 }
 
 var (
@@ -249,17 +245,41 @@ var defaultCompletionRatio = map[string]float64{
 	"gpt-4-all":      2,
 }
 
-func GetModelPriceMap() map[string]float64 {
+// InitModelSettings initializes all model related settings maps
+func InitModelSettings() {
+	// Initialize modelPriceMap
 	modelPriceMapMutex.Lock()
-	defer modelPriceMapMutex.Unlock()
-	if modelPriceMap == nil {
-		modelPriceMap = defaultModelPrice
-	}
+	modelPriceMap = defaultModelPrice
+	modelPriceMapMutex.Unlock()
+
+	// Initialize modelRatioMap
+	modelRatioMapMutex.Lock()
+	modelRatioMap = defaultModelRatio
+	modelRatioMapMutex.Unlock()
+
+	// Initialize CompletionRatio
+	CompletionRatioMutex.Lock()
+	CompletionRatio = defaultCompletionRatio
+	CompletionRatioMutex.Unlock()
+
+	// Initialize cacheRatioMap
+	cacheRatioMapMutex.Lock()
+	cacheRatioMap = defaultCacheRatio
+	cacheRatioMapMutex.Unlock()
+
+	common.SysLog("model settings initialized")
+}
+
+func GetModelPriceMap() map[string]float64 {
+	modelPriceMapMutex.RLock()
+	defer modelPriceMapMutex.RUnlock()
 	return modelPriceMap
 }
 
 func ModelPrice2JSONString() string {
-	GetModelPriceMap()
+	modelPriceMapMutex.RLock()
+	defer modelPriceMapMutex.RUnlock()
+
 	jsonBytes, err := json.Marshal(modelPriceMap)
 	if err != nil {
 		common.SysError("error marshalling model price: " + err.Error())
@@ -276,7 +296,9 @@ func UpdateModelPriceByJSONString(jsonStr string) error {
 
 // GetModelPrice 返回模型的价格，如果模型不存在则返回-1，false
 func GetModelPrice(name string, printErr bool) (float64, bool) {
-	GetModelPriceMap()
+	modelPriceMapMutex.RLock()
+	defer modelPriceMapMutex.RUnlock()
+
 	if strings.HasPrefix(name, "gpt-4-gizmo") {
 		name = "gpt-4-gizmo-*"
 	}
@@ -293,24 +315,6 @@ func GetModelPrice(name string, printErr bool) (float64, bool) {
 	return price, true
 }
 
-func GetModelRatioMap() map[string]float64 {
-	modelRatioMapMutex.Lock()
-	defer modelRatioMapMutex.Unlock()
-	if modelRatioMap == nil {
-		modelRatioMap = defaultModelRatio
-	}
-	return modelRatioMap
-}
-
-func ModelRatio2JSONString() string {
-	GetModelRatioMap()
-	jsonBytes, err := json.Marshal(modelRatioMap)
-	if err != nil {
-		common.SysError("error marshalling model ratio: " + err.Error())
-	}
-	return string(jsonBytes)
-}
-
 func UpdateModelRatioByJSONString(jsonStr string) error {
 	modelRatioMapMutex.Lock()
 	defer modelRatioMapMutex.Unlock()
@@ -319,7 +323,9 @@ func UpdateModelRatioByJSONString(jsonStr string) error {
 }
 
 func GetModelRatio(name string) (float64, bool) {
-	GetModelRatioMap()
+	modelRatioMapMutex.RLock()
+	defer modelRatioMapMutex.RUnlock()
+
 	if strings.HasPrefix(name, "gpt-4-gizmo") {
 		name = "gpt-4-gizmo-*"
 	}
@@ -343,16 +349,15 @@ func GetDefaultModelRatioMap() map[string]float64 {
 }
 
 func GetCompletionRatioMap() map[string]float64 {
-	CompletionRatioMutex.Lock()
-	defer CompletionRatioMutex.Unlock()
-	if CompletionRatio == nil {
-		CompletionRatio = defaultCompletionRatio
-	}
+	CompletionRatioMutex.RLock()
+	defer CompletionRatioMutex.RUnlock()
 	return CompletionRatio
 }
 
 func CompletionRatio2JSONString() string {
-	GetCompletionRatioMap()
+	CompletionRatioMutex.RLock()
+	defer CompletionRatioMutex.RUnlock()
+
 	jsonBytes, err := json.Marshal(CompletionRatio)
 	if err != nil {
 		common.SysError("error marshalling completion ratio: " + err.Error())
@@ -368,7 +373,8 @@ func UpdateCompletionRatioByJSONString(jsonStr string) error {
 }
 
 func GetCompletionRatio(name string) float64 {
-	GetCompletionRatioMap()
+	CompletionRatioMutex.RLock()
+	defer CompletionRatioMutex.RUnlock()
 
 	if strings.Contains(name, "/") {
 		if ratio, ok := CompletionRatio[name]; ok {
@@ -438,7 +444,14 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 		return 3, true
 	}
 	if strings.HasPrefix(name, "gemini-") {
-		return 4, true
+		if strings.HasPrefix(name, "gemini-1.5") {
+			return 4, true
+		} else if strings.HasPrefix(name, "gemini-2.0") {
+			return 4, true
+		} else if strings.HasPrefix(name, "gemini-2.5-pro-preview") {
+			return 8, true
+		}
+		return 4, false
 	}
 	if strings.HasPrefix(name, "command") {
 		switch name {
@@ -451,7 +464,7 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 		case "command-r-plus-08-2024":
 			return 4, true
 		default:
-			return 4, true
+			return 4, false
 		}
 	}
 	// hint 只给官方上4倍率，由于开源模型供应商自行定价，不对其进行补全倍率进行强制对齐
@@ -507,4 +520,15 @@ func GetAudioCompletionRatio(name string) float64 {
 		return 2
 	}
 	return 2
+}
+
+func ModelRatio2JSONString() string {
+	modelRatioMapMutex.RLock()
+	defer modelRatioMapMutex.RUnlock()
+
+	jsonBytes, err := json.Marshal(modelRatioMap)
+	if err != nil {
+		common.SysError("error marshalling model ratio: " + err.Error())
+	}
+	return string(jsonBytes)
 }

@@ -12,6 +12,7 @@ import (
 	"one-api/model"
 	"one-api/router"
 	"one-api/service"
+	"one-api/setting/operation_setting"
 	"os"
 	"strconv"
 
@@ -51,6 +52,9 @@ func main() {
 	if err != nil {
 		common.FatalLog("failed to initialize database: " + err.Error())
 	}
+
+	model.CheckSetup()
+
 	// Initialize SQL Database
 	err = model.InitLogDB()
 	if err != nil {
@@ -69,10 +73,13 @@ func main() {
 		common.FatalLog("failed to initialize Redis: " + err.Error())
 	}
 
+	// Initialize model settings
+	operation_setting.InitModelSettings()
 	// Initialize constants
 	constant.InitEnv()
 	// Initialize options
 	model.InitOptionMap()
+
 	if common.RedisEnabled {
 		// for compatibility with old versions
 		common.MemoryCacheEnabled = true
