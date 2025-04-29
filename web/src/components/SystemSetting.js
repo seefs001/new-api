@@ -19,6 +19,7 @@ import {
   verifyJSON,
 } from '../helpers/utils';
 import { API } from '../helpers/api';
+import axios from "axios";
 
 const SystemSetting = () => {
   let [inputs, setInputs] = useState({
@@ -203,10 +204,13 @@ const SystemSetting = () => {
 
   const submitWorker = async () => {
     let WorkerUrl = removeTrailingSlash(inputs.WorkerUrl);
-    await updateOptions([
+    const options = [
       { key: 'WorkerUrl', value: WorkerUrl },
-      { key: 'WorkerValidKey', value: inputs.WorkerValidKey },
-    ]);
+    ]
+    if (inputs.WorkerValidKey !== '' || WorkerUrl === '') {
+      options.push({ key: 'WorkerValidKey', value: inputs.WorkerValidKey });
+    }
+    await updateOptions(options);
   };
 
   const submitPayAddress = async () => {
@@ -371,7 +375,7 @@ const SystemSetting = () => {
   };
 
   const submitOIDCSettings = async () => {
-    if (inputs['oidc.well_known'] !== '') {
+    if (inputs['oidc.well_known'] && inputs['oidc.well_known'] !== '') {
       if (
         !inputs['oidc.well_known'].startsWith('http://') &&
         !inputs['oidc.well_known'].startsWith('https://')
@@ -380,7 +384,7 @@ const SystemSetting = () => {
         return;
       }
       try {
-        const res = await API.get(inputs['oidc.well_known']);
+        const res = await axios.create().get(inputs['oidc.well_known']);
         inputs['oidc.authorization_endpoint'] =
           res.data['authorization_endpoint'];
         inputs['oidc.token_endpoint'] = res.data['token_endpoint'];
