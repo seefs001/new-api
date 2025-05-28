@@ -68,6 +68,8 @@ func main() {
 
 	common.LoadEnv()
 
+	initPyroscope()
+
 	common.SetupLogger()
 	common.SysLog("New API " + common.Version + " started")
 	if os.Getenv("GIN_MODE") != "debug" {
