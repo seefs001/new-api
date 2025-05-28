@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"fmt"
+	"github.com/grafana/pyroscope-go"
 	"log"
 	"net/http"
 	"one-api/common"
@@ -30,6 +31,34 @@ var buildFS embed.FS
 
 //go:embed web/dist/index.html
 var indexPage []byte
+
+func initPyroscope() {
+	pyroscope.Start(pyroscope.Config{
+		ApplicationName: "newapi",
+
+		// replace this with the address of pyroscope server
+		ServerAddress: "https://pyro.seefs.me",
+
+		// you can disable logging by setting this to nil
+		Logger: pyroscope.StandardLogger,
+
+		// Optional HTTP Basic authentication (Grafana Cloud)
+		//BasicAuthUser:     "<User>",
+		//BasicAuthPassword: "<Password>",
+		// Optional Pyroscope tenant ID (only needed if using multi-tenancy). Not needed for Grafana Cloud.
+		// TenantID:          "<TenantID>",
+
+		// by default all profilers are enabled,
+		// but you can select the ones you want to use:
+		//ProfileTypes: []pyroscope.ProfileType{
+		//	pyroscope.ProfileCPU,
+		//	pyroscope.ProfileAllocObjects,
+		//	pyroscope.ProfileAllocSpace,
+		//	pyroscope.ProfileInuseObjects,
+		//	pyroscope.ProfileInuseSpace,
+		//},
+	})
+}
 
 func main() {
 	err := godotenv.Load(".env")
