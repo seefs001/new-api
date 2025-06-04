@@ -119,6 +119,9 @@ func CovertGemini2OpenAI(textRequest dto.GeneralOpenAIRequest, info *relaycommon
 			tool.Function.Parameters = cleanedParams
 			functions = append(functions, tool.Function)
 		}
+		if geminiRequest.ToolMap == nil {
+			geminiRequest.ToolMap = make(map[string]any)
+		}
 		if codeExecution {
 			geminiRequest.Tools = append(geminiRequest.Tools, GeminiChatTool{
 				CodeExecution: make(map[string]string),
