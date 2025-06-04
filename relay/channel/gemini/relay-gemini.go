@@ -142,9 +142,7 @@ func CovertGemini2OpenAI(textRequest dto.GeneralOpenAIRequest, info *relaycommon
 			geminiRequest.Tools = append(geminiRequest.Tools, GeminiChatTool{
 				FunctionDeclarations: functions,
 			})
-			geminiRequest.ToolMap["functionDeclarations"] = GeminiChatTool{
-				FunctionDeclarations: functions,
-			}
+			geminiRequest.ToolMap["functionDeclarations"] = functions
 		}
 		// common.SysLog("tools: " + fmt.Sprintf("%+v", geminiRequest.Tools))
 		// json_data, _ := json.Marshal(geminiRequest.Tools)
