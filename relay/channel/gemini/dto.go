@@ -3,12 +3,14 @@ package gemini
 import "google.golang.org/genai"
 
 type GeminiChatRequest struct {
-	Contents           []GeminiChatContent        `json:"contents"`
-	SafetySettings     []GeminiChatSafetySettings `json:"safetySettings,omitempty"`
-	GenerationConfig   GeminiChatGenerationConfig `json:"generationConfig,omitempty"`
-	Tools              []GeminiChatTool           `json:"tools,omitempty"`
-	SystemInstructions *GeminiChatContent         `json:"systemInstruction,omitempty"`
-	ToolConfig         *genai.ToolConfig          `json:"toolConfig,omitempty"`
+	Contents         []GeminiChatContent        `json:"contents"`
+	SafetySettings   []GeminiChatSafetySettings `json:"safetySettings,omitempty"`
+	GenerationConfig GeminiChatGenerationConfig `json:"generationConfig,omitempty"`
+	Tools            []GeminiChatTool           `json:"-"`
+	ToolMap          map[string]any             `json:"tools,omitempty"`
+	genai.Tool
+	SystemInstructions *GeminiChatContent `json:"systemInstruction,omitempty"`
+	ToolConfig         *genai.ToolConfig  `json:"toolConfig,omitempty"`
 }
 
 type GeminiThinkingConfig struct {
