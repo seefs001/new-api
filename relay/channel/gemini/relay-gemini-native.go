@@ -80,7 +80,7 @@ func GeminiTextGenerationStreamHandler(c *gin.Context, resp *http.Response, info
 	helper.SetEventStreamHeaders(c)
 
 	helper.StreamScannerHandler(c, resp, info, func(data string) bool {
-		var geminiResponse GeminiChatResponse
+		var geminiResponse genai.GenerateContentResponse
 		err := common.DecodeJsonStr(data, &geminiResponse)
 		if err != nil {
 			common.LogError(c, "error unmarshalling stream response: "+err.Error())
@@ -90,7 +90,7 @@ func GeminiTextGenerationStreamHandler(c *gin.Context, resp *http.Response, info
 		// 统计图片数量
 		for _, candidate := range geminiResponse.Candidates {
 			for _, part := range candidate.Content.Parts {
-				if part.InlineData != nil && part.InlineData.MimeType != "" {
+				if part.InlineData != nil && part.InlineData.MIMEType != "" {
 					imageCount++
 				}
 			}
@@ -98,9 +98,9 @@ func GeminiTextGenerationStreamHandler(c *gin.Context, resp *http.Response, info
 
 		// 更新使用量统计
 		if geminiResponse.UsageMetadata.TotalTokenCount != 0 {
-			usage.PromptTokens = geminiResponse.UsageMetadata.PromptTokenCount
-			usage.CompletionTokens = geminiResponse.UsageMetadata.CandidatesTokenCount
-			usage.TotalTokens = geminiResponse.UsageMetadata.TotalTokenCount
+			usage.PromptTokens = int(geminiResponse.UsageMetadata.PromptTokenCount)
+			usage.CompletionTokens = int(geminiResponse.UsageMetadata.CandidatesTokenCount)
+			usage.TotalTokens = int(geminiResponse.UsageMetadata.TotalTokenCount)
 		}
 
 		// 直接发送 GeminiChatResponse 响应
