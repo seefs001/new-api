@@ -2,6 +2,7 @@ package gemini
 
 import (
 	"encoding/json"
+	"google.golang.org/genai"
 	"io"
 	"net/http"
 	"one-api/common"
@@ -29,7 +30,7 @@ func GeminiTextGenerationHandler(c *gin.Context, resp *http.Response, info *rela
 	}
 
 	// 解析为 Gemini 原生响应格式
-	var geminiResponse GeminiChatResponse
+	var geminiResponse genai.GenerateContentResponse
 	err = common.DecodeJson(responseBody, &geminiResponse)
 	if err != nil {
 		return nil, service.OpenAIErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
@@ -50,9 +51,9 @@ func GeminiTextGenerationHandler(c *gin.Context, resp *http.Response, info *rela
 
 	// 计算使用量（基于 UsageMetadata）
 	usage := dto.Usage{
-		PromptTokens:     geminiResponse.UsageMetadata.PromptTokenCount,
-		CompletionTokens: geminiResponse.UsageMetadata.CandidatesTokenCount,
-		TotalTokens:      geminiResponse.UsageMetadata.TotalTokenCount,
+		PromptTokens:     int(geminiResponse.UsageMetadata.PromptTokenCount),
+		CompletionTokens: int(geminiResponse.UsageMetadata.CandidatesTokenCount),
+		TotalTokens:      int(geminiResponse.UsageMetadata.TotalTokenCount),
 	}
 
 	// 直接返回 Gemini 原生格式的 JSON 响应
