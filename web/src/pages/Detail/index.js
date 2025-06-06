@@ -1,44 +1,50 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { initVChartSemiTheme } from '@visactor/vchart-semi-theme';
+import { useNavigate } from 'react-router-dom';
 
 import {
-  Button,
   Card,
-  Col,
-  Descriptions,
   Form,
-  Layout,
-  Row,
   Spin,
-  Tabs,
+  IconButton,
+  Modal,
+  Avatar,
 } from '@douyinfe/semi-ui';
+import {
+  IconRefresh,
+  IconSearch,
+  IconMoneyExchangeStroked,
+  IconHistogram,
+  IconRotate,
+  IconCoinMoneyStroked,
+  IconTextStroked,
+  IconPulse,
+  IconStopwatchStroked,
+  IconTypograph,
+} from '@douyinfe/semi-icons';
 import { VChart } from '@visactor/react-vchart';
 import {
   API,
   isAdmin,
+  isMobile,
   showError,
   timestamp2string,
   timestamp2string1,
-} from '../../helpers';
-import {
   getQuotaWithUnit,
   modelColorMap,
   renderNumber,
   renderQuota,
-  renderQuotaNumberWithDigit,
-  stringToColor,
-  modelToColor,
-} from '../../helpers/render';
+  modelToColor
+} from '../../helpers';
 import { UserContext } from '../../context/User/index.js';
-import { StyleContext } from '../../context/Style/index.js';
 import { useTranslation } from 'react-i18next';
 
 const Detail = (props) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const formRef = useRef();
   let now = new Date();
   const [userState, userDispatch] = useContext(UserContext);
-  const [styleState, styleDispatch] = useContext(StyleContext);
   const [inputs, setInputs] = useState({
     username: '',
     token_name: '',
@@ -67,6 +73,8 @@ const Detail = (props) => {
   );
   const [pieData, setPieData] = useState([{ type: 'null', value: '0' }]);
   const [lineData, setLineData] = useState([]);
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
+
   const [spec_pie, setSpecPie] = useState({
     type: 'pie',
     data: [
@@ -199,6 +207,22 @@ const Detail = (props) => {
 
   // 添加一个新的状态来存储模型-颜色映射
   const [modelColors, setModelColors] = useState({});
+
+  // 显示搜索Modal
+  const showSearchModal = () => {
+    setSearchModalVisible(true);
+  };
+
+  // 关闭搜索Modal
+  const handleCloseModal = () => {
+    setSearchModalVisible(false);
+  };
+
+  // 搜索Modal确认按钮
+  const handleSearchConfirm = () => {
+    refresh();
+    setSearchModalVisible(false);
+  };
 
   const handleInputChange = (value, name) => {
     if (name === 'data_export_default_time') {
@@ -416,165 +440,225 @@ const Detail = (props) => {
     }
   }, []);
 
+  // 数据卡片信息
+  const statsData = [
+    {
+      title: t('当前余额'),
+      value: renderQuota(userState?.user?.quota),
+      icon: <IconMoneyExchangeStroked size="large" />,
+      color: 'bg-blue-50',
+      avatarColor: 'blue',
+      onClick: () => navigate('/console/topup'),
+    },
+    {
+      title: t('历史消耗'),
+      value: renderQuota(userState?.user?.used_quota),
+      icon: <IconHistogram size="large" />,
+      color: 'bg-purple-50',
+      avatarColor: 'purple',
+    },
+    {
+      title: t('请求次数'),
+      value: userState.user?.request_count,
+      icon: <IconRotate size="large" />,
+      color: 'bg-green-50',
+      avatarColor: 'green',
+    },
+    {
+      title: t('统计额度'),
+      value: renderQuota(consumeQuota),
+      icon: <IconCoinMoneyStroked size="large" />,
+      color: 'bg-yellow-50',
+      avatarColor: 'yellow',
+    },
+    {
+      title: t('统计Tokens'),
+      value: isNaN(consumeTokens) ? 0 : consumeTokens,
+      icon: <IconTextStroked size="large" />,
+      color: 'bg-pink-50',
+      avatarColor: 'pink',
+    },
+    {
+      title: t('统计次数'),
+      value: times,
+      icon: <IconPulse size="large" />,
+      color: 'bg-teal-50',
+      avatarColor: 'cyan',
+    },
+    {
+      title: t('平均RPM'),
+      value: (
+        times /
+        ((Date.parse(end_timestamp) - Date.parse(start_timestamp)) / 60000)
+      ).toFixed(3),
+      icon: <IconStopwatchStroked size="large" />,
+      color: 'bg-indigo-50',
+      avatarColor: 'indigo',
+    },
+    {
+      title: t('平均TPM'),
+      value: (() => {
+        const tpm = consumeTokens /
+          ((Date.parse(end_timestamp) - Date.parse(start_timestamp)) / 60000);
+        return isNaN(tpm) ? '0' : tpm.toFixed(3);
+      })(),
+      icon: <IconTypograph size="large" />,
+      color: 'bg-orange-50',
+      avatarColor: 'orange',
+    },
+  ];
+
+  // 获取问候语
+  const getGreeting = () => {
+    const hours = new Date().getHours();
+    let greeting = '';
+
+    if (hours >= 5 && hours < 12) {
+      greeting = t('早上好');
+    } else if (hours >= 12 && hours < 14) {
+      greeting = t('中午好');
+    } else if (hours >= 14 && hours < 18) {
+      greeting = t('下午好');
+    } else {
+      greeting = t('晚上好');
+    }
+
+    const username = userState?.user?.username || '';
+    return `👋${greeting}，${username}`;
+  };
+
   return (
-    <>
-      <Layout>
-        <Layout.Header>
-          <h3>{t('数据看板')}</h3>
-        </Layout.Header>
-        <Layout.Content>
-          <Form ref={formRef} layout='horizontal' style={{ marginTop: 10 }}>
-            <>
-              <Form.DatePicker
-                field='start_timestamp'
-                label={t('起始时间')}
-                style={{ width: 272 }}
-                initValue={start_timestamp}
-                value={start_timestamp}
-                type='dateTime'
-                name='start_timestamp'
-                onChange={(value) =>
-                  handleInputChange(value, 'start_timestamp')
-                }
-              />
-              <Form.DatePicker
-                field='end_timestamp'
-                fluid
-                label={t('结束时间')}
-                style={{ width: 272 }}
-                initValue={end_timestamp}
-                value={end_timestamp}
-                type='dateTime'
-                name='end_timestamp'
-                onChange={(value) => handleInputChange(value, 'end_timestamp')}
-              />
-              <Form.Select
-                field='data_export_default_time'
-                label={t('时间粒度')}
-                style={{ width: 176 }}
-                initValue={dataExportDefaultTime}
-                placeholder={t('时间粒度')}
-                name='data_export_default_time'
-                optionList={[
-                  { label: t('小时'), value: 'hour' },
-                  { label: t('天'), value: 'day' },
-                  { label: t('周'), value: 'week' },
-                ]}
-                onChange={(value) =>
-                  handleInputChange(value, 'data_export_default_time')
-                }
-              ></Form.Select>
-              {isAdminUser && (
-                <>
-                  <Form.Input
-                    field='username'
-                    label={t('用户名称')}
-                    style={{ width: 176 }}
-                    value={username}
-                    placeholder={t('可选值')}
-                    name='username'
-                    onChange={(value) => handleInputChange(value, 'username')}
-                  />
-                </>
-              )}
-              <Button
-                label={t('查询')}
-                type='primary'
-                htmlType='submit'
-                className='btn-margin-right'
-                onClick={refresh}
-                loading={loading}
-                style={{ marginTop: 24 }}
+    <div className="bg-gray-50 h-full">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-semibold text-gray-800">{getGreeting()}</h2>
+        <div className="flex gap-3">
+          <IconButton
+            icon={<IconSearch />}
+            onClick={showSearchModal}
+            className="bg-green-500 text-white hover:bg-green-600 !rounded-full"
+          />
+          <IconButton
+            icon={<IconRefresh />}
+            onClick={refresh}
+            loading={loading}
+            className="bg-blue-500 text-white hover:bg-blue-600 !rounded-full"
+          />
+        </div>
+      </div>
+
+      {/* 搜索条件Modal */}
+      <Modal
+        title={t('搜索条件')}
+        visible={searchModalVisible}
+        onOk={handleSearchConfirm}
+        onCancel={handleCloseModal}
+        closeOnEsc={true}
+        size={isMobile() ? 'full-width' : 'small'}
+        centered
+      >
+        <Form ref={formRef} layout='vertical' className="w-full">
+          <Form.DatePicker
+            field='start_timestamp'
+            label={t('起始时间')}
+            className="w-full mb-2 !rounded-lg"
+            initValue={start_timestamp}
+            value={start_timestamp}
+            type='dateTime'
+            name='start_timestamp'
+            size='large'
+            onChange={(value) => handleInputChange(value, 'start_timestamp')}
+          />
+          <Form.DatePicker
+            field='end_timestamp'
+            label={t('结束时间')}
+            className="w-full mb-2 !rounded-lg"
+            initValue={end_timestamp}
+            value={end_timestamp}
+            type='dateTime'
+            name='end_timestamp'
+            size='large'
+            onChange={(value) => handleInputChange(value, 'end_timestamp')}
+          />
+          <Form.Select
+            field='data_export_default_time'
+            label={t('时间粒度')}
+            className="w-full mb-2 !rounded-lg"
+            initValue={dataExportDefaultTime}
+            placeholder={t('时间粒度')}
+            name='data_export_default_time'
+            size='large'
+            optionList={[
+              { label: t('小时'), value: 'hour' },
+              { label: t('天'), value: 'day' },
+              { label: t('周'), value: 'week' },
+            ]}
+            onChange={(value) => handleInputChange(value, 'data_export_default_time')}
+          />
+          {isAdminUser && (
+            <Form.Input
+              field='username'
+              label={t('用户名称')}
+              className="w-full mb-2 !rounded-lg"
+              value={username}
+              placeholder={t('可选值')}
+              name='username'
+              size='large'
+              onChange={(value) => handleInputChange(value, 'username')}
+            />
+          )}
+        </Form>
+      </Modal>
+
+      <Spin spinning={loading}>
+        <div className="mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {statsData.map((stat, idx) => (
+              <Card
+                key={idx}
+                shadows='hover'
+                className={`${stat.color} border-0 !rounded-2xl w-full`}
+                headerLine={false}
+                onClick={stat.onClick}
               >
-                {t('查询')}
-              </Button>
-              <Form.Section></Form.Section>
-            </>
-          </Form>
-          <Spin spinning={loading}>
-            <Row
-              gutter={{ xs: 16, sm: 16, md: 16, lg: 24, xl: 24, xxl: 24 }}
-              style={{ marginTop: 20 }}
-              type='flex'
-              justify='space-between'
-            >
-              <Col span={styleState.isMobile ? 24 : 8}>
-                <Card className='panel-desc-card'>
-                  <Descriptions row size='small'>
-                    <Descriptions.Item itemKey={t('当前余额')}>
-                      {renderQuota(userState?.user?.quota)}
-                    </Descriptions.Item>
-                    <Descriptions.Item itemKey={t('历史消耗')}>
-                      {renderQuota(userState?.user?.used_quota)}
-                    </Descriptions.Item>
-                    <Descriptions.Item itemKey={t('请求次数')}>
-                      {userState.user?.request_count}
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Card>
-              </Col>
-              <Col span={styleState.isMobile ? 24 : 8}>
-                <Card>
-                  <Descriptions row size='small'>
-                    <Descriptions.Item itemKey={t('统计额度')}>
-                      {renderQuota(consumeQuota)}
-                    </Descriptions.Item>
-                    <Descriptions.Item itemKey={t('统计Tokens')}>
-                      {consumeTokens}
-                    </Descriptions.Item>
-                    <Descriptions.Item itemKey={t('统计次数')}>
-                      {times}
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Card>
-              </Col>
-              <Col span={styleState.isMobile ? 24 : 8}>
-                <Card>
-                  <Descriptions row size='small'>
-                    <Descriptions.Item itemKey={t('平均RPM')}>
-                      {(
-                        times /
-                        ((Date.parse(end_timestamp) -
-                          Date.parse(start_timestamp)) /
-                          60000)
-                      ).toFixed(3)}
-                    </Descriptions.Item>
-                    <Descriptions.Item itemKey={t('平均TPM')}>
-                      {(
-                        consumeTokens /
-                        ((Date.parse(end_timestamp) -
-                          Date.parse(start_timestamp)) /
-                          60000)
-                      ).toFixed(3)}
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Card>
-              </Col>
-            </Row>
-            <Card style={{ marginTop: 20 }}>
-              <Tabs type='line' defaultActiveKey='1'>
-                <Tabs.TabPane tab={t('消耗分布')} itemKey='1'>
-                  <div style={{ height: 500 }}>
-                    <VChart
-                      spec={spec_line}
-                      option={{ mode: 'desktop-browser' }}
-                    />
+                <div className="flex items-center">
+                  <Avatar
+                    className="mr-3"
+                    size="medium"
+                    color={stat.avatarColor}
+                  >
+                    {stat.icon}
+                  </Avatar>
+                  <div>
+                    <div className="text-sm text-gray-500">{stat.title}</div>
+                    <div className="text-xl font-semibold">{stat.value}</div>
                   </div>
-                </Tabs.TabPane>
-                <Tabs.TabPane tab={t('调用次数分布')} itemKey='2'>
-                  <div style={{ height: 500 }}>
-                    <VChart
-                      spec={spec_pie}
-                      option={{ mode: 'desktop-browser' }}
-                    />
-                  </div>
-                </Tabs.TabPane>
-              </Tabs>
-            </Card>
-          </Spin>
-        </Layout.Content>
-      </Layout>
-    </>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <Card shadows='hover' className="shadow-sm !rounded-2xl" headerLine={true} title={t('模型消耗分布')}>
+            <div style={{ height: 400 }}>
+              <VChart
+                spec={spec_line}
+                option={{ mode: 'desktop-browser' }}
+              />
+            </div>
+          </Card>
+
+          <Card shadows='hover' className="shadow-sm !rounded-2xl" headerLine={true} title={t('模型调用次数占比')}>
+            <div style={{ height: 400 }}>
+              <VChart
+                spec={spec_pie}
+                option={{ mode: 'desktop-browser' }}
+              />
+            </div>
+          </Card>
+        </div>
+      </Spin>
+    </div>
   );
 };
 

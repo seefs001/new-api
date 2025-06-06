@@ -58,24 +58,62 @@ func CovertGemini2OpenAI(textRequest dto.GeneralOpenAIRequest, info *relaycommon
 
 	if model_setting.GetGeminiSettings().ThinkingAdapterEnabled {
 		if strings.HasSuffix(info.OriginModelName, "-thinking") {
-			// 如果模型名以 gemini-2.5-pro 开头，不设置 ThinkingBudget
-			if strings.HasPrefix(info.OriginModelName, "gemini-2.5-pro") {
+			// 硬编码不支持 ThinkingBudget 的旧模型
+			unsupportedModels := []string{
+				"gemini-2.5-pro-preview-05-06",
+				"gemini-2.5-pro-preview-03-25",
+			}
+
+			isUnsupported := false
+			for _, unsupportedModel := range unsupportedModels {
+				if strings.HasPrefix(info.OriginModelName, unsupportedModel) {
+					isUnsupported = true
+					break
+				}
+			}
+
+			if isUnsupported {
 				geminiRequest.GenerationConfig.ThinkingConfig = &GeminiThinkingConfig{
 					IncludeThoughts: true,
 				}
 			} else {
 				budgetTokens := model_setting.GetGeminiSettings().ThinkingAdapterBudgetTokensPercentage * float64(geminiRequest.GenerationConfig.MaxOutputTokens)
-				if budgetTokens == 0 || budgetTokens > 24576 {
-					budgetTokens = 24576
+
+				// 检查是否为新的2.5pro模型（支持ThinkingBudget但有特殊范围）
+				isNew25Pro := strings.HasPrefix(info.OriginModelName, "gemini-2.5-pro") &&
+					!strings.HasPrefix(info.OriginModelName, "gemini-2.5-pro-preview-05-06") &&
+					!strings.HasPrefix(info.OriginModelName, "gemini-2.5-pro-preview-03-25")
+
+				if isNew25Pro {
+					// 新的2.5pro模型：ThinkingBudget范围为128-32768
+					if budgetTokens == 0 || budgetTokens < 128 {
+						budgetTokens = 128
+					} else if budgetTokens > 32768 {
+						budgetTokens = 32768
+					}
+				} else {
+					// 其他模型：ThinkingBudget范围为0-24576
+					if budgetTokens == 0 || budgetTokens > 24576 {
+						budgetTokens = 24576
+					}
 				}
+
 				geminiRequest.GenerationConfig.ThinkingConfig = &GeminiThinkingConfig{
 					ThinkingBudget:  common.GetPointer(int(budgetTokens)),
 					IncludeThoughts: true,
 				}
 			}
 		} else if strings.HasSuffix(info.OriginModelName, "-nothinking") {
-			geminiRequest.GenerationConfig.ThinkingConfig = &GeminiThinkingConfig{
-				ThinkingBudget: common.GetPointer(0),
+			// 检查是否为新的2.5pro模型（不支持-nothinking，因为最低值只能为128）
+			isNew25Pro := strings.HasPrefix(info.OriginModelName, "gemini-2.5-pro") &&
+				!strings.HasPrefix(info.OriginModelName, "gemini-2.5-pro-preview-05-06") &&
+				!strings.HasPrefix(info.OriginModelName, "gemini-2.5-pro-preview-03-25")
+
+			if !isNew25Pro {
+				// 只有非新2.5pro模型才支持-nothinking
+				geminiRequest.GenerationConfig.ThinkingConfig = &GeminiThinkingConfig{
+					ThinkingBudget: common.GetPointer(0),
+				}
 			}
 		}
 	}
@@ -183,17 +221,12 @@ func CovertGemini2OpenAI(textRequest dto.GeneralOpenAIRequest, info *relaycommon
 			} else if val, exists := tool_call_ids[message.ToolCallId]; exists {
 				name = val
 			}
-			content := common.StrToMap(message.StringContent())
+			contentMap := common.StrToMap(message.StringContent())
 			functionResp := &FunctionResponse{
-				Name: name,
-				Response: GeminiFunctionResponseContent{
-					Name:    name,
-					Content: content,
-				},
+				Name:     name,
+				Response: contentMap,
 			}
-			if content == nil {
-				functionResp.Response.Content = message.StringContent()
-			}
+
 			*parts = append(*parts, GeminiPart{
 				FunctionResponse: functionResp,
 			})
