@@ -56,13 +56,13 @@ func GeminiTextGenerationHandler(c *gin.Context, resp *http.Response, info *rela
 		TotalTokens:      int(geminiResponse.UsageMetadata.TotalTokenCount),
 	}
 
-	usage.CompletionTokenDetails.ReasoningTokens = geminiResponse.UsageMetadata.ThoughtsTokenCount
+	usage.CompletionTokenDetails.ReasoningTokens = int(geminiResponse.UsageMetadata.ThoughtsTokenCount)
 
 	for _, detail := range geminiResponse.UsageMetadata.PromptTokensDetails {
 		if detail.Modality == "AUDIO" {
-			usage.PromptTokensDetails.AudioTokens = detail.TokenCount
+			usage.PromptTokensDetails.AudioTokens = int(detail.TokenCount)
 		} else if detail.Modality == "TEXT" {
-			usage.PromptTokensDetails.TextTokens = detail.TokenCount
+			usage.PromptTokensDetails.TextTokens = int(detail.TokenCount)
 		}
 	}
 
@@ -111,15 +111,15 @@ func GeminiTextGenerationStreamHandler(c *gin.Context, resp *http.Response, info
 			usage.PromptTokens = int(geminiResponse.UsageMetadata.PromptTokenCount)
 			usage.CompletionTokens = int(geminiResponse.UsageMetadata.CandidatesTokenCount)
 			usage.TotalTokens = int(geminiResponse.UsageMetadata.TotalTokenCount)
-			usage.PromptTokens = geminiResponse.UsageMetadata.PromptTokenCount
-			usage.CompletionTokens = geminiResponse.UsageMetadata.CandidatesTokenCount
-			usage.TotalTokens = geminiResponse.UsageMetadata.TotalTokenCount
-			usage.CompletionTokenDetails.ReasoningTokens = geminiResponse.UsageMetadata.ThoughtsTokenCount
+			usage.PromptTokens = int(geminiResponse.UsageMetadata.PromptTokenCount)
+			usage.CompletionTokens = int(geminiResponse.UsageMetadata.CandidatesTokenCount)
+			usage.TotalTokens = int(geminiResponse.UsageMetadata.TotalTokenCount)
+			usage.CompletionTokenDetails.ReasoningTokens = int(geminiResponse.UsageMetadata.ThoughtsTokenCount)
 			for _, detail := range geminiResponse.UsageMetadata.PromptTokensDetails {
 				if detail.Modality == "AUDIO" {
-					usage.PromptTokensDetails.AudioTokens = detail.TokenCount
+					usage.PromptTokensDetails.AudioTokens = int(detail.TokenCount)
 				} else if detail.Modality == "TEXT" {
-					usage.PromptTokensDetails.TextTokens = detail.TokenCount
+					usage.PromptTokensDetails.TextTokens = int(detail.TokenCount)
 				}
 			}
 		}
