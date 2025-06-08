@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig, transformWithEsbuild } from 'vite';
-import semiWebpackPlugin from '@douyinfe/semi-webpack-plugin';
+import pkg from '@douyinfe/vite-plugin-semi';
+const { vitePluginSemi } = pkg;
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -21,16 +22,9 @@ export default defineConfig({
       },
     },
     react(),
-    {
-      name: 'semi-plugin',
-      apply: 'build',
-      configResolved() {
-        // Apply SemiWebpackPlugin during build
-        new semiWebpackPlugin({
-          cssLayer: true
-        });
-      }
-    }
+    vitePluginSemi({
+      cssLayer: true
+    })
   ],
   optimizeDeps: {
     force: true,

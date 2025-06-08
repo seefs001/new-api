@@ -22,11 +22,23 @@ const Home = () => {
   const isDemoSiteMode = statusState?.status?.demo_site_enabled || false;
 
   useEffect(() => {
-    const lastCloseDate = localStorage.getItem('notice_close_date');
-    const today = new Date().toDateString();
-    if (lastCloseDate !== today) {
-      setNoticeVisible(true);
-    }
+    const checkNoticeAndShow = async () => {
+      const lastCloseDate = localStorage.getItem('notice_close_date');
+      const today = new Date().toDateString();
+      if (lastCloseDate !== today) {
+        try {
+          const res = await API.get('/api/notice');
+          const { success, data } = res.data;
+          if (success && data && data.trim() !== '') {
+            setNoticeVisible(true);
+          }
+        } catch (error) {
+          console.error('获取公告失败:', error);
+        }
+      }
+    };
+
+    checkNoticeAndShow();
   }, []);
 
   const displayHomePageContent = async () => {
@@ -79,7 +91,7 @@ const Home = () => {
               <div className="flex-shrink-0 w-full md:w-[480px] md:mr-[60px] lg:mr-[120px] mb-8 md:mb-0">
                 <div className="flex items-center gap-2 justify-center md:justify-start">
                   <h1 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-semi-color-text-0 w-auto leading-normal md:leading-[67px]">
-                    {statusState?.status?.system_name}
+                    {statusState?.status?.system_name || 'New API'}
                   </h1>
                   {statusState?.status?.version && (
                     <Tag color='light-blue' size='large' shape='circle' className="ml-1">

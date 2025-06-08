@@ -56,6 +56,16 @@ func GeminiTextGenerationHandler(c *gin.Context, resp *http.Response, info *rela
 		TotalTokens:      int(geminiResponse.UsageMetadata.TotalTokenCount),
 	}
 
+	usage.CompletionTokenDetails.ReasoningTokens = geminiResponse.UsageMetadata.ThoughtsTokenCount
+
+	for _, detail := range geminiResponse.UsageMetadata.PromptTokensDetails {
+		if detail.Modality == "AUDIO" {
+			usage.PromptTokensDetails.AudioTokens = detail.TokenCount
+		} else if detail.Modality == "TEXT" {
+			usage.PromptTokensDetails.TextTokens = detail.TokenCount
+		}
+	}
+
 	// 直接返回 Gemini 原生格式的 JSON 响应
 	jsonResponse, err := json.Marshal(geminiResponse)
 	if err != nil {
@@ -101,6 +111,17 @@ func GeminiTextGenerationStreamHandler(c *gin.Context, resp *http.Response, info
 			usage.PromptTokens = int(geminiResponse.UsageMetadata.PromptTokenCount)
 			usage.CompletionTokens = int(geminiResponse.UsageMetadata.CandidatesTokenCount)
 			usage.TotalTokens = int(geminiResponse.UsageMetadata.TotalTokenCount)
+			usage.PromptTokens = geminiResponse.UsageMetadata.PromptTokenCount
+			usage.CompletionTokens = geminiResponse.UsageMetadata.CandidatesTokenCount
+			usage.TotalTokens = geminiResponse.UsageMetadata.TotalTokenCount
+			usage.CompletionTokenDetails.ReasoningTokens = geminiResponse.UsageMetadata.ThoughtsTokenCount
+			for _, detail := range geminiResponse.UsageMetadata.PromptTokensDetails {
+				if detail.Modality == "AUDIO" {
+					usage.PromptTokensDetails.AudioTokens = detail.TokenCount
+				} else if detail.Modality == "TEXT" {
+					usage.PromptTokensDetails.TextTokens = detail.TokenCount
+				}
+			}
 		}
 
 		// 直接发送 GeminiChatResponse 响应
@@ -119,7 +140,6 @@ func GeminiTextGenerationStreamHandler(c *gin.Context, resp *http.Response, info
 	}
 
 	// 计算最终使用量
-	usage.PromptTokensDetails.TextTokens = usage.PromptTokens
 	usage.CompletionTokens = usage.TotalTokens - usage.PromptTokens
 
 	// 移除流式响应结尾的[Done]，因为Gemini API没有发送Done的行为

@@ -20,7 +20,7 @@ import {
   renderQuota,
   stringToColor,
   getLogOther,
-  renderModelTag
+  renderModelTag,
 } from '../../helpers';
 
 import {
@@ -40,15 +40,11 @@ import {
   Typography,
   Divider,
   Input,
-  DatePicker
+  DatePicker,
 } from '@douyinfe/semi-ui';
 import { ITEMS_PER_PAGE } from '../../constants';
 import Paragraph from '@douyinfe/semi-ui/lib/es/typography/paragraph';
-import {
-  IconSetting,
-  IconSearch,
-  IconForward
-} from '@douyinfe/semi-icons';
+import { IconSetting, IconSearch, IconForward } from '@douyinfe/semi-icons';
 
 const { Text } = Typography;
 
@@ -202,7 +198,7 @@ const LogsTable = () => {
       return renderModelTag(record.model_name, {
         onClick: (event) => {
           copyText(event, record.model_name).then((r) => { });
-        }
+        },
       });
     } else {
       return (
@@ -212,20 +208,26 @@ const LogsTable = () => {
               content={
                 <div style={{ padding: 10 }}>
                   <Space vertical align={'start'}>
-                    <div className="flex items-center">
-                      <Text strong style={{ marginRight: 8 }}>{t('请求并计费模型')}:</Text>
+                    <div className='flex items-center'>
+                      <Text strong style={{ marginRight: 8 }}>
+                        {t('请求并计费模型')}:
+                      </Text>
                       {renderModelTag(record.model_name, {
                         onClick: (event) => {
                           copyText(event, record.model_name).then((r) => { });
-                        }
+                        },
                       })}
                     </div>
-                    <div className="flex items-center">
-                      <Text strong style={{ marginRight: 8 }}>{t('实际模型')}:</Text>
+                    <div className='flex items-center'>
+                      <Text strong style={{ marginRight: 8 }}>
+                        {t('实际模型')}:
+                      </Text>
                       {renderModelTag(other.upstream_model_name, {
                         onClick: (event) => {
-                          copyText(event, other.upstream_model_name).then((r) => { });
-                        }
+                          copyText(event, other.upstream_model_name).then(
+                            (r) => { },
+                          );
+                        },
                       })}
                     </div>
                   </Space>
@@ -236,7 +238,11 @@ const LogsTable = () => {
                 onClick: (event) => {
                   copyText(event, record.model_name).then((r) => { });
                 },
-                suffixIcon: <IconForward style={{ width: '0.9em', height: '0.9em', opacity: 0.75 }} />
+                suffixIcon: (
+                  <IconForward
+                    style={{ width: '0.9em', height: '0.9em', opacity: 0.75 }}
+                  />
+                ),
               })}
             </Popover>
           </Space>
@@ -345,13 +351,11 @@ const LogsTable = () => {
       key: COLUMN_KEYS.TIME,
       title: t('时间'),
       dataIndex: 'timestamp2string',
-      width: 180,
     },
     {
       key: COLUMN_KEYS.CHANNEL,
       title: t('渠道'),
       dataIndex: 'channel',
-      width: 80,
       className: isAdmin() ? 'tableShow' : 'tableHiddle',
       render: (text, record, index) => {
         return isAdminUser ? (
@@ -382,7 +386,6 @@ const LogsTable = () => {
       key: COLUMN_KEYS.USERNAME,
       title: t('用户'),
       dataIndex: 'username',
-      width: 150,
       className: isAdmin() ? 'tableShow' : 'tableHiddle',
       render: (text, record, index) => {
         return isAdminUser ? (
@@ -409,7 +412,6 @@ const LogsTable = () => {
       key: COLUMN_KEYS.TOKEN,
       title: t('令牌'),
       dataIndex: 'token_name',
-      width: 160,
       render: (text, record, index) => {
         return record.type === 0 || record.type === 2 || record.type === 5 ? (
           <div>
@@ -435,7 +437,6 @@ const LogsTable = () => {
       key: COLUMN_KEYS.GROUP,
       title: t('分组'),
       dataIndex: 'group',
-      width: 120,
       render: (text, record, index) => {
         if (record.type === 0 || record.type === 2 || record.type === 5) {
           if (record.group) {
@@ -468,7 +469,6 @@ const LogsTable = () => {
       key: COLUMN_KEYS.TYPE,
       title: t('类型'),
       dataIndex: 'type',
-      width: 100,
       render: (text, record, index) => {
         return <>{renderType(text)}</>;
       },
@@ -477,7 +477,6 @@ const LogsTable = () => {
       key: COLUMN_KEYS.MODEL,
       title: t('模型'),
       dataIndex: 'model_name',
-      width: 160,
       render: (text, record, index) => {
         return record.type === 0 || record.type === 2 || record.type === 5 ? (
           <>{renderModelName(record)}</>
@@ -490,7 +489,6 @@ const LogsTable = () => {
       key: COLUMN_KEYS.USE_TIME,
       title: t('用时/首字'),
       dataIndex: 'use_time',
-      width: 160,
       render: (text, record, index) => {
         if (record.is_stream) {
           let other = getLogOther(record.other);
@@ -519,7 +517,6 @@ const LogsTable = () => {
       key: COLUMN_KEYS.PROMPT,
       title: t('提示'),
       dataIndex: 'prompt_tokens',
-      width: 100,
       render: (text, record, index) => {
         return record.type === 0 || record.type === 2 || record.type === 5 ? (
           <>{<span> {text} </span>}</>
@@ -532,7 +529,6 @@ const LogsTable = () => {
       key: COLUMN_KEYS.COMPLETION,
       title: t('补全'),
       dataIndex: 'completion_tokens',
-      width: 100,
       render: (text, record, index) => {
         return parseInt(text) > 0 &&
           (record.type === 0 || record.type === 2 || record.type === 5) ? (
@@ -546,7 +542,6 @@ const LogsTable = () => {
       key: COLUMN_KEYS.COST,
       title: t('花费'),
       dataIndex: 'quota',
-      width: 120,
       render: (text, record, index) => {
         return record.type === 0 || record.type === 2 || record.type === 5 ? (
           <>{renderQuota(text, 6)}</>
@@ -559,7 +554,6 @@ const LogsTable = () => {
       key: COLUMN_KEYS.RETRY,
       title: t('重试'),
       dataIndex: 'retry',
-      width: 160,
       className: isAdmin() ? 'tableShow' : 'tableHiddle',
       render: (text, record, index) => {
         let content = t('渠道') + `：${record.channel}`;
@@ -588,7 +582,7 @@ const LogsTable = () => {
       key: COLUMN_KEYS.DETAILS,
       title: t('详情'),
       dataIndex: 'content',
-      width: 200,
+      fixed: 'right',
       render: (text, record, index) => {
         let other = getLogOther(record.other);
         if (other == null || record.type !== 2) {
@@ -662,25 +656,25 @@ const LogsTable = () => {
         visible={showColumnSelector}
         onCancel={() => setShowColumnSelector(false)}
         footer={
-          <div className="flex justify-end">
+          <div className='flex justify-end'>
             <Button
-              theme="light"
+              theme='light'
               onClick={() => initDefaultColumns()}
-              className="!rounded-full"
+              className='!rounded-full'
             >
               {t('重置')}
             </Button>
             <Button
-              theme="light"
+              theme='light'
               onClick={() => setShowColumnSelector(false)}
-              className="!rounded-full"
+              className='!rounded-full'
             >
               {t('取消')}
             </Button>
             <Button
               type='primary'
               onClick={() => setShowColumnSelector(false)}
-              className="!rounded-full"
+              className='!rounded-full'
             >
               {t('确定')}
             </Button>
@@ -700,7 +694,7 @@ const LogsTable = () => {
           </Checkbox>
         </div>
         <div
-          className="flex flex-wrap max-h-96 overflow-y-auto rounded-lg p-4"
+          className='flex flex-wrap max-h-96 overflow-y-auto rounded-lg p-4'
           style={{ border: '1px solid var(--semi-color-border)' }}
         >
           {allColumns.map((column) => {
@@ -715,10 +709,7 @@ const LogsTable = () => {
             }
 
             return (
-              <div
-                key={column.key}
-                className="w-1/2 mb-4 pr-2"
-              >
+              <div key={column.key} className='w-1/2 mb-4 pr-2'>
                 <Checkbox
                   checked={!!visibleColumns[column.key]}
                   onChange={(e) =>
@@ -1002,6 +993,9 @@ const LogsTable = () => {
             other?.file_search || false,
             other?.file_search_call_count || 0,
             other?.file_search_price || 0,
+            other?.audio_input_seperate_price || false,
+            other?.audio_input_token_count || 0,
+            other?.audio_input_price || 0,
           );
         }
         expandDataLocal.push({
@@ -1096,13 +1090,20 @@ const LogsTable = () => {
     return <Descriptions data={expandData[record.key]} />;
   };
 
+  // 检查是否有任何记录有展开内容
+  const hasExpandableRows = () => {
+    return logs.some(
+      (log) => expandData[log.key] && expandData[log.key].length > 0,
+    );
+  };
+
   return (
     <>
       {renderColumnSelector()}
       <Card
-        className="!rounded-2xl overflow-hidden mb-4"
+        className='!rounded-2xl mb-4'
         title={
-          <div className="flex flex-col w-full">
+          <div className='flex flex-col w-full'>
             <Spin spinning={loadingStat}>
               <Space>
                 <Tag
@@ -1145,15 +1146,15 @@ const LogsTable = () => {
               </Space>
             </Spin>
 
-            <Divider margin="12px" />
+            <Divider margin='12px' />
 
             {/* 搜索表单区域 */}
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className='flex flex-col gap-4'>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
                 {/* 时间选择器 */}
-                <div className="col-span-1 lg:col-span-2">
+                <div className='col-span-1 lg:col-span-2'>
                   <DatePicker
-                    className="w-full"
+                    className='w-full'
                     value={[start_timestamp, end_timestamp]}
                     type='dateTimeRange'
                     onChange={(value) => {
@@ -1169,7 +1170,7 @@ const LogsTable = () => {
                 <Select
                   value={logType.toString()}
                   placeholder={t('日志类型')}
-                  className="!rounded-full"
+                  className='!rounded-full'
                   onChange={(value) => {
                     setLogType(parseInt(value));
                     loadLogs(0, pageSize, parseInt(value));
@@ -1189,7 +1190,7 @@ const LogsTable = () => {
                   placeholder={t('令牌名称')}
                   value={token_name}
                   onChange={(value) => handleInputChange(value, 'token_name')}
-                  className="!rounded-full"
+                  className='!rounded-full'
                   showClear
                 />
 
@@ -1198,7 +1199,7 @@ const LogsTable = () => {
                   placeholder={t('模型名称')}
                   value={model_name}
                   onChange={(value) => handleInputChange(value, 'model_name')}
-                  className="!rounded-full"
+                  className='!rounded-full'
                   showClear
                 />
 
@@ -1207,7 +1208,7 @@ const LogsTable = () => {
                   placeholder={t('分组')}
                   value={group}
                   onChange={(value) => handleInputChange(value, 'group')}
-                  className="!rounded-full"
+                  className='!rounded-full'
                   showClear
                 />
 
@@ -1218,7 +1219,7 @@ const LogsTable = () => {
                       placeholder={t('渠道 ID')}
                       value={channel}
                       onChange={(value) => handleInputChange(value, 'channel')}
-                      className="!rounded-full"
+                      className='!rounded-full'
                       showClear
                     />
                     <Input
@@ -1226,7 +1227,7 @@ const LogsTable = () => {
                       placeholder={t('用户名称')}
                       value={username}
                       onChange={(value) => handleInputChange(value, 'username')}
-                      className="!rounded-full"
+                      className='!rounded-full'
                       showClear
                     />
                   </>
@@ -1234,14 +1235,14 @@ const LogsTable = () => {
               </div>
 
               {/* 操作按钮区域 */}
-              <div className="flex justify-between items-center pt-2">
+              <div className='flex justify-between items-center pt-2'>
                 <div></div>
-                <div className="flex gap-2">
+                <div className='flex gap-2'>
                   <Button
                     type='primary'
                     onClick={refresh}
                     loading={loading}
-                    className="!rounded-full"
+                    className='!rounded-full'
                   >
                     {t('查询')}
                   </Button>
@@ -1250,7 +1251,7 @@ const LogsTable = () => {
                     type='tertiary'
                     icon={<IconSetting />}
                     onClick={() => setShowColumnSelector(true)}
-                    className="!rounded-full"
+                    className='!rounded-full'
                   >
                     {t('列设置')}
                   </Button>
@@ -1259,17 +1260,22 @@ const LogsTable = () => {
             </div>
           </div>
         }
-        shadows='hover'
+        shadows='always'
+        bordered={false}
       >
         <Table
           columns={getVisibleColumns()}
-          expandedRowRender={expandRowRender}
-          expandRowByClick={true}
+          {...(hasExpandableRows() && {
+            expandedRowRender: expandRowRender,
+            expandRowByClick: true,
+            rowExpandable: (record) => expandData[record.key] && expandData[record.key].length > 0
+          })}
           dataSource={logs}
           rowKey='key'
           loading={loading}
-          className="rounded-xl overflow-hidden"
-          size="middle"
+          scroll={{ x: 'max-content' }}
+          className='rounded-xl overflow-hidden'
+          size='middle'
           pagination={{
             formatPageText: (page) =>
               t('第 {{start}} - {{end}} 条，共 {{total}} 条', {
