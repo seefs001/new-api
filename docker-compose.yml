@@ -41,6 +41,7 @@ services:
     image: mysql:8.2
     container_name: mysql
     restart: always
+    command: [--max-connections=500]
     environment:
       MYSQL_ROOT_PASSWORD: 123456  # Ensure this matches the password in SQL_DSN
       MYSQL_DATABASE: new-api
